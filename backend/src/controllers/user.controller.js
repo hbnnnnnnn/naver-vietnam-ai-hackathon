@@ -2,14 +2,10 @@ import User from '../models/User.js';
 
 export const createUser = async (req, res) => {
     try {
-        const { userId, skinType, concerns, budget, routinePreference, location, latitude, longitude } = req.body;
+        const { skinType, concerns, budget, routinePreference, location, latitude, longitude } = req.body;
         const newUser = new User({
-            userId,
             skinType,
             concerns,
-            budget,
-            routinePreference,
-            location,
             latitude,
             longitude
         });
@@ -22,8 +18,8 @@ export const createUser = async (req, res) => {
 
 export const getUser = async (req, res) => {
     try {
-        const { userId } = req.params;
-        const user = await User.findOne({ userId });
+        const { id } = req.params;
+        const user = await User.findById(id);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -35,8 +31,8 @@ export const getUser = async (req, res) => {
 
 export const deleteUser = async (req, res) => {
     try {
-        const { userId } = req.params;
-        const deletedUser = await User.findOneAndDelete({ userId });
+        const { id } = req.params;
+        const deletedUser = await User.findByIdAndDelete(id);
         if (!deletedUser) {
             return res.status(404).json({ message: 'User not found' });
         }
