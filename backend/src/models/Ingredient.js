@@ -1,11 +1,6 @@
 import mongoose from 'mongoose';
 // model is built based on this dataset https://www.kaggle.com/datasets/amaboh/skin-care-product-ingredients-inci-list
 const ingredientSchema = new mongoose.Schema({
-    ingredientId: {
-        type: String,
-        required: true,
-        unique: true
-    },
     name: {
         type: String,
         required: true,

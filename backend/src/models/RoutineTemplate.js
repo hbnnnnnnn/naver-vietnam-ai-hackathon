@@ -26,11 +26,6 @@ const routineStepSchema = new mongoose.Schema({
 });
 
 const routineTemplateSchema = new mongoose.Schema({
-    templateId: {
-        type: String,
-        required: true,
-        unique: true
-    },
     name: {
         type: String,
         required: true

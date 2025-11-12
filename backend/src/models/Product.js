@@ -1,11 +1,6 @@
 import mongoose from 'mongoose';
 // model is built base on this dataset https://www.kaggle.com/datasets/dominoweir/skincare-product-ingredients
 const productSchema = new mongoose.Schema({
-    productId: {
-        type: String,
-        required: true,
-        unique: true
-    },
     name: {
         type: String,
         required: true
