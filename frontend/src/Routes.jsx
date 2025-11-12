@@ -4,6 +4,7 @@ import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
 import Home from "./pages/Home";
 import ProductAnalysis from "pages/product-analysis";
+import Chatbot from "pages/chatbot";
 
 const Routes = () => {
   return (
@@ -13,6 +14,7 @@ const Routes = () => {
         <RouterRoutes>
           <Route path="/" element={<Home />} />
           <Route path="/product" element={<ProductAnalysis />} />
+          <Route path="/chatbot" element={<Chatbot />} />
         </RouterRoutes>
       </ErrorBoundary>
     </BrowserRouter>
