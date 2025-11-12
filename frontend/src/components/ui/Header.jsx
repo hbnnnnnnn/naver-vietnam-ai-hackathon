@@ -9,26 +9,26 @@ const Header = () => {
 
   const navigationItems = [
     {
-      label: "Trang chủ",
+      label: "Home",
       path: "/landing-page",
       icon: "Home",
       tooltip: "Trang chủ và giới thiệu platform",
     },
     {
-      label: "Phân tích sản phẩm",
-      path: "/product-analysis",
+      label: "Product Analysis",
+      path: "/product",
       icon: "Camera",
       tooltip: "Chụp ảnh và phân tích thành phần sản phẩm",
     },
     {
-      label: "Gợi ý quy trình",
-      path: "/routine-recommendations",
+      label: "Routine Recommendations",
+      path: "/routine",
       icon: "Calendar",
       tooltip: "Nhận gợi ý quy trình chăm sóc da cá nhân",
     },
     {
-      label: "Tư vấn AI",
-      path: "/skincare-chatbot",
+      label: "AI Chat",
+      path: "/chatbot",
       icon: "MessageCircle",
       tooltip: "Trò chuyện với chuyên gia AI về skincare",
     },
@@ -69,45 +69,72 @@ const Header = () => {
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center space-x-1">
-              {navigationItems?.map((item) => (
-                <div key={item?.path} className="relative group">
-                  <Button
-                    variant={isActiveRoute(item?.path) ? "default" : "ghost"}
-                    onClick={() => handleNavigation(item?.path)}
-                    className={`
-                      px-4 py-2 text-sm font-medium transition-all duration-200
-                      ${
-                        isActiveRoute(item?.path)
-                          ? "bg-gradient-primary text-white shadow-glass"
-                          : "text-foreground hover:text-primary hover:bg-white/10"
-                      }
-                    `}
-                    iconName={item?.icon}
-                    iconPosition="left"
-                    iconSize={16}
-                  >
-                    {item?.label}
-                  </Button>
+            <div className="hidden md:flex items-center space-x-4 flex-1">
+              <nav className="flex items-center space-x-1 flex-1 justify-center">
+                {navigationItems?.map((item) => (
+                  <div key={item?.path} className="relative group">
+                    <Button
+                      variant={isActiveRoute(item?.path) ? "default" : "ghost"}
+                      onClick={() => handleNavigation(item?.path)}
+                      className={`
+                        px-4 py-2 text-sm font-medium transition-all duration-200
+                        ${
+                          isActiveRoute(item?.path)
+                            ? "bg-gradient-primary text-white shadow-glass"
+                            : "text-foreground hover:text-primary hover:bg-white/10"
+                        }
+                      `}
+                      iconName={item?.icon}
+                      iconPosition="left"
+                      iconSize={16}
+                    >
+                      {item?.label}
+                    </Button>
 
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-60">
-                    {item?.tooltip}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-60">
+                      {item?.tooltip}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                    </div>
                   </div>
+                ))}
+              </nav>
+
+              {/* Profile Button */}
+              <div className="relative group">
+                <Button
+                  variant="ghost"
+                  onClick={() => handleNavigation("/profile")}
+                  className="p-2 text-foreground hover:text-primary hover:bg-white/10 rounded-full"
+                  iconName="User"
+                  iconSize={20}
+                />
+                {/* Profile Tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-60">
+                  User Profile
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                 </div>
-              ))}
-            </nav>
+              </div>
+            </div>
 
             {/* Mobile Menu Button */}
-            <div className="md:hidden">
+            <div className="md:hidden flex items-center space-x-2">
+              {/* Mobile Profile Button */}
+              <Button
+                variant="ghost"
+                onClick={() => handleNavigation("/profile")}
+                className="p-2 text-foreground hover:text-primary hover:bg-white/10 rounded-full"
+                iconName="User"
+                iconSize={20}
+              />
+
               <Button
                 variant="ghost"
                 onClick={toggleMobileMenu}
                 className="p-2 text-foreground hover:text-primary hover:bg-white/10"
                 iconName="Menu"
                 iconSize={24}
-              ></Button>
+              />
             </div>
           </div>
         </div>
@@ -170,13 +197,37 @@ const Header = () => {
                     </div>
                   </Button>
                 ))}
+
+                {/* Mobile Profile Button */}
+                <Button
+                  variant={isActiveRoute("/profile") ? "default" : "ghost"}
+                  onClick={() => handleNavigation("/profile")}
+                  className={`
+                    w-full justify-start px-4 py-3 text-base font-medium transition-all duration-200
+                    ${
+                      isActiveRoute("/profile")
+                        ? "bg-gradient-primary text-white shadow-glass"
+                        : "text-foreground hover:text-primary hover:bg-white/10"
+                    }
+                  `}
+                  iconName="User"
+                  iconPosition="left"
+                  iconSize={20}
+                >
+                  <div className="flex flex-col items-start">
+                    <span>Profile</span>
+                    <span className="text-xs opacity-70 font-caption">
+                      Manage your account and preferences
+                    </span>
+                  </div>
+                </Button>
               </nav>
 
               {/* Mobile Menu Footer */}
               <div className="p-4 border-t border-white/20">
                 <div className="text-center text-sm text-muted-foreground font-caption">
                   <p>SkinCare Analyzer</p>
-                  <p className="text-xs opacity-60">Phân tích da thông minh</p>
+                  <p className="text-xs opacity-60">Smart Skin Analysis</p>
                 </div>
               </div>
             </div>
