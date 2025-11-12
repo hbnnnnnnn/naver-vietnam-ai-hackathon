@@ -31,14 +31,11 @@ export const getRoutine = async (req, res) => {
 
         const normalizedSkinType = skinType.toLowerCase();
 
-        // Check if routines exist for this skin type
         let routines = await Routine.find({ skinType: normalizedSkinType }).populate('steps.product');
 
-        // If no routines exist, generate and save them
         if (routines.length === 0) {
             const { morningDoc, nightDoc } = await generateAndSaveRoutines(normalizedSkinType);
 
-            // Populate product details before returning
             await morningDoc.populate('steps.product');
             await nightDoc.populate('steps.product');
 
@@ -66,7 +63,7 @@ export const createRoutine = async (req, res) => {
 
         const { morningDoc, nightDoc } = await generateAndSaveRoutines(skinType);
 
-        res.status(201).json({
+        res.status(200).json({
             message: 'Routine generated successfully',
             morning: morningDoc,
             night: nightDoc
