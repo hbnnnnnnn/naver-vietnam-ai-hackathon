@@ -4,9 +4,7 @@ import path from "path";
 import csv from "csv-parser";
 import * as fuzz from "fuzzball";
 import FormData from "form-data";
-import { fileURLToPath } from 'url';
 
-// Configuration constants
 const OCR_CONFIG = {
   VERSION: "V2",
   RESULT_TYPE: "json",
@@ -14,57 +12,26 @@ const OCR_CONFIG = {
   DEFAULT_LANG: 'ko'
 };
 
-const __filename = fileURLToPath(import.meta.url);
-
 const FUZZY_MATCH_THRESHOLD = 85;
 
-/**
- * Calls the Naver OCR API with the provided image
- * @param {Object} config - OCR configuration
- * @param {string} config.secretKey - API secret key
- * @param {string} config.apiUrl - API endpoint URL
- * @param {string} config.imagePath - Path to the image file
- * @param {string} config.imageFormat - Image format (default: 'png')
- * @param {string} config.lang - Language code (default: 'ko')
- * @returns {Promise<Object>} OCR response data
- */
-export async function callNaverOcr({
-  secretKey, 
-  apiUrl, 
-  imagePath, 
-  imageFormat = OCR_CONFIG.DEFAULT_FORMAT, 
-  lang = OCR_CONFIG.DEFAULT_LANG
-}) {
-  if (!secretKey || !apiUrl || !imagePath) {
-    throw new Error('Missing required parameters: secretKey, apiUrl, and imagePath are required');
-  }
-
+export async function callNaverOcr({ secretKey, apiUrl, imagePath, imageFormat = OCR_CONFIG.DEFAULT_FORMAT, lang = OCR_CONFIG.DEFAULT_LANG }) {
+  if (!secretKey || !apiUrl || !imagePath) throw new Error('Missing required parameters: secretKey, apiUrl, and imagePath are required');
   const form = new FormData();
   const message = {
     version: OCR_CONFIG.VERSION,
     requestId: `${Date.now()}`,
     timestamp: Date.now(),
-    images: [{
-      format: imageFormat,
-      name: path.basename(imagePath),
-      data: null,
-      url: null
-    }],
+    images: [{ format: imageFormat, name: path.basename(imagePath), data: null, url: null }],
     lang: lang,
     resultType: OCR_CONFIG.RESULT_TYPE
   };
-
   form.append('message', JSON.stringify(message));
   form.append('file', fs.createReadStream(imagePath));
-
   try {
     const response = await axios({
       method: 'post',
       url: apiUrl,
-      headers: {
-        'X-OCR-SECRET': secretKey,
-        ...form.getHeaders() // This will now work
-      },
+      headers: { 'X-OCR-SECRET': secretKey, ...form.getHeaders() },
       data: form,
       maxBodyLength: Infinity,
       maxContentLength: Infinity
@@ -172,69 +139,6 @@ function loadOcrData(jsonPath) {
 }
 
 /**
- * Sorts OCR fields by position (top-to-bottom, left-to-right)
- * @param {Array} fields - OCR field array
- * @returns {Array} Sorted fields
- */
-function sortFieldsByPosition(fields) {
-  return fields.sort((a, b) => {
-    const aY = a.boundingPoly?.vertices?.[0]?.y || 0;
-    const bY = b.boundingPoly?.vertices?.[0]?.y || 0;
-    
-    if (aY !== bY) return aY - bY;
-    
-    const aX = a.boundingPoly?.vertices?.[0]?.x || 0;
-    const bX = b.boundingPoly?.vertices?.[0]?.x || 0;
-    return aX - bX;
-  });
-}
-
-/**
- * Extracts ingredients text using header detection patterns
- * @param {string} fullText - Complete OCR text
- * @returns {string} Cleaned ingredients text
- */
-function extractIngredientsFromText(fullText) {
-  // Header patterns for ingredient detection
-  const headerPatterns = [
-    /전\s*성\s*분/i,
-    /성\s*분/i,
-    /ingredients?/i,
-    /full\s*ingredients?/i,
-    /ingredient\s*list/i,
-  ];
-
-  let startIndex = null;
-  for (const pattern of headerPatterns) {
-    const match = pattern.exec(fullText);
-    if (match) {
-      startIndex = match.index;
-      break;
-    }
-  }
-
-  let ingredientsText = startIndex !== null ? fullText.slice(startIndex) : fullText;
-
-  // End markers to stop ingredient extraction
-  const endMarkers = [
-    '용량', '사용법', '화장품책임판매업자', '피엘인터내셔널',
-    'directions', 'how to use', 'usage', 'manufacturer', 'distributor', 'volume'
-  ];
-  
-  const splitPattern = new RegExp(endMarkers.join('|'), 'i');
-  ingredientsText = ingredientsText.split(splitPattern)[0];
-
-  // Clean up the text
-  ingredientsText = ingredientsText.replace(
-    /(전\s*성\s*분|ingredients?|full\s*ingredients?|ingredient\s*list)/gi, 
-    ''
-  );
-  ingredientsText = ingredientsText.replace(/\s+/g, ' ').trim();
-
-  return ingredientsText;
-}
-
-/**
  * Loads INCI ingredient list from CSV file
  * @param {string} csvPath - Path to CSV file
  * @returns {Promise<string[]>} Array of INCI ingredient names
@@ -298,73 +202,4 @@ export function matchIngredientsWithDatabase(tokens, ingredientList) {
   }
   
   return foundIngredients;
-}
-
-/**
- * Extracts cosmetic ingredients from an image using OCR and INCI database matching
- * @param {string} secretKey - API secret key
- * @param {string} apiUrl - CLOVA OCR API URL
- * @param {string} imagePath - Path to image file
- * @param {string} imageFormat - Image format (optional, defaults to 'png')
- * @returns {Promise<Object>} Extraction results
- */
-export async function extractIngredients(secretKey, apiUrl, imagePath, imageFormat = 'png') {
-  try {
-    if (!secretKey || !apiUrl || !imagePath) {
-      throw new Error('Missing required parameters: secretKey, apiUrl, and imagePath are required');
-    }
-
-    // Get CSV path for INCI ingredient database
-    const csvPath = path.join(path.dirname(__filename), 'cosing_ingredients.csv');
-
-    // Call CLOVA OCR API
-    const ocrData = await callNaverOcr({
-      secretKey,
-      apiUrl,
-      imagePath,
-      imageFormat
-    });
-
-    if (!ocrData?.images?.[0]?.fields) {
-      throw new Error('Invalid OCR response format');
-    }
-
-    // Sort and extract text from OCR fields
-    const sortedFields = sortFieldsByPosition(ocrData.images[0].fields);
-    const fullText = sortedFields.map(field => field.inferText || '').join(' ');
-    
-
-    
-    // Extract ingredients section
-    const ingredientsText = extractIngredientsFromText(fullText);
-    
-    // Load INCI ingredient database
-    const ingredientList = await loadINCIList(csvPath);
-    
-    // Tokenize and clean ingredients text
-    const tokens = ingredientsText
-      .split(',')
-      .map(token => token.trim().toLowerCase())
-      .filter(Boolean);
-    
-    
-    // Match against INCI database
-    const foundIngredients = matchIngredientsWithDatabase(tokens, ingredientList);
-    
-    return {
-      success: true,
-      text_length: fullText.length,
-      ingredients_found: foundIngredients.length,
-      ingredients: foundIngredients
-    };
-    
-  } catch (error) {
-    console.error('Error extracting ingredients:', error.message);
-    return {
-      success: false,
-      error: error.message,
-      ingredients_found: 0,
-      ingredients: []
-    };
-  }
 }

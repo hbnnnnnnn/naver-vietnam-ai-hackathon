@@ -4,7 +4,8 @@
     "target": "ES2022",
     "moduleResolution": "node",
     "checkJs": false,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "ignoreDeprecations": "6.0"
   },
   "include": [
     "src/**/*"
