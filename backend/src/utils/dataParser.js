@@ -128,7 +128,8 @@ export const parseProduct = (rawProduct) => {
     combination_skin: Boolean(rawProduct.combination_skin),
     dry_skin: Boolean(rawProduct.dry_skin),
     oily_skin: Boolean(rawProduct.oily_skin),
-    normal_skin: Boolean(rawProduct.normal_skin)
+    normal_skin: Boolean(rawProduct.normal_skin),
+    sensitive_skin: Boolean(rawProduct.sensitive_skin)
   };
 };
 
