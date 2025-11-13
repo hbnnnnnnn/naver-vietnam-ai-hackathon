@@ -50,11 +50,15 @@ const productSchema = new mongoose.Schema({
     normal_skin: {
         type: Boolean,
         required: true
+    },
+    sensitive_skin: {
+        type: Boolean,
+        required: true
     }
 }, { timestamps: true });
 
 productSchema.index({ category: 1, price: 1, rank: 1 });
 productSchema.index({ spf: 1 });
-productSchema.index({ combination_skin: 1, dry_skin: 1, oily_skin: 1, normal_skin: 1 });
+productSchema.index({ combination_skin: 1, dry_skin: 1, oily_skin: 1, normal_skin: 1, sensitive_skin: 1 });
 
 export default mongoose.model('Product', productSchema);

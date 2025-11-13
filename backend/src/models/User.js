@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({
   skinType: {
     type: String,
     required: true,
-    enum: ['dry', 'oily', 'combination', 'normal']
+    enum: ['dry', 'oily', 'combination', 'normal', 'sensitive']
   },
   concerns: [String], 
   latitude: { type: Number, required: true },

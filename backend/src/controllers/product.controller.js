@@ -15,6 +15,7 @@ export const addProduct = async (req, res) => {
             dry_skin: Boolean(dry_skin),
             oily_skin: Boolean(oily_skin),
             normal_skin: Boolean(normal_skin),
+            sensitive_skin: Boolean(sensitive_skin),
             rank
         });
         
@@ -128,7 +129,8 @@ export const getProductsByUserSkinType = async (req, res) => {
             'combination': 'combination_skin',
             'dry': 'dry_skin',
             'oily': 'oily_skin',
-            'normal': 'normal_skin'
+            'normal': 'normal_skin',
+            'sensitive': 'sensitive_skin'
         };
         
         const field = skinFieldMap[skinType.toLowerCase()];

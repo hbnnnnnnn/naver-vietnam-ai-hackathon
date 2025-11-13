@@ -8,7 +8,7 @@ const routineStepSchema = new mongoose.Schema({
 const routineSchema = new mongoose.Schema({
     name: { type: String, enum: ['morning', 'night'], required: true },
     steps: [routineStepSchema],
-    skinType: { type: String, enum: ['combination', 'dry', 'oily', 'normal'], required: true },
+    skinType: { type: String, enum: ['combination', 'dry', 'oily', 'normal', 'sensitive'], required: true },
     totalPrice: { type: Number, required: true }
 }, { timestamps: true });
 
