@@ -6,6 +6,8 @@ import Home from "./pages/Home";
 import RoutineRecommendations from "./pages/routine-recommendations";
 import ProductAnalysis from "pages/product-analysis";
 import Chatbot from "pages/chatbot";
+import UserProfileDashboard from "pages/user-profile";
+import Login from "pages/login";
 
 const Routes = () => {
   return (
@@ -17,6 +19,8 @@ const Routes = () => {
           <Route path="routine" element={<RoutineRecommendations />} />
           <Route path="/product" element={<ProductAnalysis />} />
           <Route path="/chatbot" element={<Chatbot />} />
+          <Route path="/profile" element={<UserProfileDashboard />} />
+          <Route path="/login" element={<Login />} />
         </RouterRoutes>
       </ErrorBoundary>
     </BrowserRouter>
