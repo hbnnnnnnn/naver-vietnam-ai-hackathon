@@ -5,6 +5,7 @@ import FilterControls from "./components/FilterControls";
 import RoutineCard from "./components/RoutineCard";
 import ProductModal from "./components/ProductModal";
 import RoutineComparison from "./components/RoutineComparison";
+import Sunscreen from "./components/Sunscreen";
 import Icon from "../../components/AppIcon";
 import Button from "../../components/ui/Button";
 import AnalysisProgress from "./components/AnalysisProgress";
@@ -408,7 +409,7 @@ const RoutineRecommendations = () => {
               <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glass">
                 <Icon name="Calendar" size={24} color="white" />
               </div>
-              <h1 className="text-3xl lg:text-4xl font-heading font-bold gradient-text">
+              <h1 className="text-3xl font-heading font-bold gradient-text">
                 Skincare Routine Recommendations
               </h1>
             </div>
@@ -420,12 +421,14 @@ const RoutineRecommendations = () => {
           </div>
 
           {/* Filter Controls */}
-          <FilterControls
-            routineType={routineType}
-            setRoutineType={setRoutineType}
-            priceRange={priceRange}
-            setPriceRange={setPriceRange}
-          />
+          <div className="mt-14">
+            <FilterControls
+              routineType={routineType}
+              setRoutineType={setRoutineType}
+              priceRange={priceRange}
+              setPriceRange={setPriceRange}
+            />
+          </div>
           {/* CTA Button */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
             <Button
@@ -433,7 +436,7 @@ const RoutineRecommendations = () => {
               size="lg"
               onClick={handleAnalysisStart}
               disabled={isAnalyzing}
-              className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl"
+              className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-11"
               iconName="Camera"
               iconPosition="left"
               iconSize={20}
@@ -459,6 +462,8 @@ const RoutineRecommendations = () => {
                   priceRange={priceRange}
                 />
               )}
+
+              <Sunscreen onOpenSuggestions={handleCategoryClick} />
 
               {/* Routine Cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
@@ -569,7 +574,7 @@ const RoutineRecommendations = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="rounded-3xl border border-primary hover:bg-primary hover:text-primary-foreground active:bg-primary/80"
+                      className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black"
                       iconName="Camera"
                       iconPosition="left"
                       iconSize={16}
