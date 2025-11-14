@@ -131,7 +131,7 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
                     <div className="pt-3 mt-auto">
                       <Button
                         variant="outline"
-                        className="w-full border border-primary rounded-3xl hover:bg-primary hover:text-primary-foreground active:bg-primary/80"
+                        className="w-full border rounded-3xl hover:bg-[rgba(255,144,187,0.2)] border-black"
                         iconName="ExternalLink"
                         iconPosition="right"
                         iconSize={14}
@@ -156,7 +156,7 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
               </div>
               <div className="flex space-x-3">
                 <Button
-                  className="rounded-3xl border border-primary hover:bg-primary hover:text-primary-foreground hover:border-primary active:bg-primary/80"
+                  className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black"
                   variant="outline"
                   onClick={onClose}
                   iconName="ArrowLeft"
