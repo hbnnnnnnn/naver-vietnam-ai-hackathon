@@ -7,6 +7,7 @@ import ProductAnalysis from "pages/product-analysis";
 import Chatbot from "pages/chatbot";
 import UserProfileDashboard from "pages/user-profile";
 import Login from "pages/login";
+import LandingPage from "pages/landing-page";
 
 const Routes = () => {
   return (
