@@ -10,7 +10,7 @@ const Header = () => {
   const navigationItems = [
     {
       label: "Home",
-      path: "/landing-page",
+      path: "/",
       icon: "Home",
       tooltip: "Trang chủ và giới thiệu platform",
     },
