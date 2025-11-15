@@ -1,78 +1,42 @@
-import path from "path";
-import { callNaverOcr, loadINCIList, matchIngredientsWithDatabase } from "../utils/ocrLogic.js";
+import { callNaverOcr, matchIngredientsWithFuzzy, extractIngredientsFromText, sortFieldsByPosition, buildLinesFromFields, cleanAndSplitIngredients } from "../utils/ocrLogic.js";
+import IngredientCosing from "../models/ingredientCosing.js";
 import { fileURLToPath } from 'url';
+import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function sortFieldsByPosition(fields) {
-  return fields.sort((a, b) => {
-    const aY = a.boundingPoly?.vertices?.[0]?.y || 0;
-    const bY = b.boundingPoly?.vertices?.[0]?.y || 0;
-    if (aY !== bY) return aY - bY;
-    const aX = a.boundingPoly?.vertices?.[0]?.x || 0;
-    const bX = b.boundingPoly?.vertices?.[0]?.x || 0;
-    return aX - bX;
-  });
-}
-
-function extractIngredientsFromText(fullText) {
-  const headerPatterns = [
-    /전\s*성\s*분/i,
-    /성\s*분/i,
-    /ingredients?/i,
-    /full\s*ingredients?/i,
-    /ingredient\s*list/i,
-  ];
-  let startIndex = null;
-  for (const pattern of headerPatterns) {
-    const match = pattern.exec(fullText);
-    if (match) {
-      startIndex = match.index;
-      break;
-    }
-  }
-  let ingredientsText = startIndex !== null ? fullText.slice(startIndex) : fullText;
-  const endMarkers = [
-    '용량', '사용법', '화장품책임판매업자', '피엘인터내셔널',
-    'directions', 'how to use', 'usage', 'manufacturer', 'distributor', 'volume'
-  ];
-  const splitPattern = new RegExp(endMarkers.join('|'), 'i');
-  ingredientsText = ingredientsText.split(splitPattern)[0];
-  ingredientsText = ingredientsText.replace(/(전\s*성\s*분|ingredients?|full\s*ingredients?|ingredient\s*list)/gi, '');
-  ingredientsText = ingredientsText.replace(/\s+/g, ' ').trim();
-  return ingredientsText;
-}
-
 export async function extractIngredientsService(secretKey, apiUrl, imagePath, imageFormat = 'png') {
   try {
-    if (!secretKey || !apiUrl || !imagePath) {
-      throw new Error('Missing required parameters: secretKey, apiUrl, and imagePath are required');
-    }
-  const csvPath = path.join(__dirname, '..', '..', 'data', 'cosing_ingredients.csv');
+    if (!secretKey || !apiUrl || !imagePath) throw new Error('Missing required parameters');
+
     const ocrData = await callNaverOcr({ secretKey, apiUrl, imagePath, imageFormat });
-    if (!ocrData?.images?.[0]?.fields) {
-      throw new Error('Invalid OCR response format');
-    }
-    const sortedFields = sortFieldsByPosition(ocrData.images[0].fields);
-    const fullText = sortedFields.map(field => field.inferText || '').join(' ');
-    const ingredientsText = extractIngredientsFromText(fullText);
-    const ingredientList = await loadINCIList(csvPath);
-    const tokens = ingredientsText.split(',').map(token => token.trim().toLowerCase()).filter(Boolean);
-    const foundIngredients = matchIngredientsWithDatabase(tokens, ingredientList);
+    if (!ocrData?.images?.[0]?.fields) throw new Error('Invalid OCR response');
+
+    const sorted = sortFieldsByPosition(ocrData.images[0].fields);
+    const lines = buildLinesFromFields(sorted);
+    const fullText = lines.join('\n');
+
+    const ingredientsBlock = extractIngredientsFromText(fullText);
+    const tokens = cleanAndSplitIngredients(ingredientsBlock).map(t => t.toLowerCase());
+
+    // Query your ingredient collection for normalized names
+    const ingredientDocs = await IngredientCosing.find({}, 'inci_normalized inci_name').lean();
+    const normalizedList = ingredientDocs.map(d => d.inci_normalized).filter(Boolean);
+
+    const matchedNormalized = await matchIngredientsWithFuzzy(tokens, normalizedList, 75);
+
+    // Map normalized back to display names
+    const matchedNames = ingredientDocs
+      .filter(d => matchedNormalized.includes(d.inci_normalized))
+      .map(d => d.inci_name || d.inci_normalized);
+
     return {
       success: true,
-      text_length: fullText.length,
-      ingredients_found: foundIngredients.length,
-      ingredients: foundIngredients
+      ingredients: matchedNames
     };
-  } catch (error) {
-    console.error('Error extracting ingredients:', error.message);
-    return {
-      success: false,
-      error: error.message,
-      ingredients_found: 0,
-      ingredients: []
-    };
+  } catch (err) {
+    console.error('extractIngredientsService err', err);
+    return { success: false, error: err.message, ingredients_found: 0, ingredients: [] };
   }
 }
