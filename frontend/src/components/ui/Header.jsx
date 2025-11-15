@@ -10,7 +10,7 @@ const Header = () => {
   const navigationItems = [
     {
       label: "Home",
-      path: "/landing-page",
+      path: "/",
       icon: "Home",
       tooltip: "Trang chủ và giới thiệu platform",
     },
@@ -72,49 +72,35 @@ const Header = () => {
             <div className="hidden md:flex items-center space-x-4 flex-1">
               <nav className="flex items-center space-x-1 flex-1 justify-center">
                 {navigationItems?.map((item) => (
-                  <div key={item?.path} className="relative group">
-                    <Button
-                      variant={isActiveRoute(item?.path) ? "default" : "ghost"}
-                      onClick={() => handleNavigation(item?.path)}
-                      className={`
-                        px-4 py-2 text-sm font-medium transition-all duration-200
-                        ${
-                          isActiveRoute(item?.path)
-                            ? "bg-gradient-primary text-white shadow-glass"
-                            : "text-foreground hover:text-primary hover:bg-white/10"
-                        }
-                      `}
-                      iconName={item?.icon}
-                      iconPosition="left"
-                      iconSize={16}
-                    >
-                      {item?.label}
-                    </Button>
-
-                    {/* Tooltip */}
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-60">
-                      {item?.tooltip}
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                    </div>
-                  </div>
+                  <Button
+                    key={item?.path}
+                    variant={isActiveRoute(item?.path) ? "default" : "ghost"}
+                    onClick={() => handleNavigation(item?.path)}
+                    className={`
+                      px-4 py-2 text-sm font-medium transition-all duration-200
+                      ${
+                        isActiveRoute(item?.path)
+                          ? "bg-gradient-primary text-white shadow-glass rounded-3xl"
+                          : "text-foreground hover:text-primary hover:bg-white/10"
+                      }
+                    `}
+                    iconName={item?.icon}
+                    iconPosition="left"
+                    iconSize={16}
+                  >
+                    {item?.label}
+                  </Button>
                 ))}
               </nav>
 
               {/* Profile Button */}
-              <div className="relative group">
-                <Button
-                  variant="ghost"
-                  onClick={() => handleNavigation("/profile")}
-                  className="p-2 text-foreground hover:text-primary hover:bg-white/10 rounded-full"
-                  iconName="User"
-                  iconSize={20}
-                />
-                {/* Profile Tooltip */}
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-60">
-                  User Profile
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                </div>
-              </div>
+              <Button
+                variant="ghost"
+                onClick={() => handleNavigation("/profile")}
+                className="p-2 text-foreground hover:text-primary hover:bg-white/10 rounded-full"
+                iconName="User"
+                iconSize={20}
+              />
             </div>
 
             {/* Mobile Menu Button */}
