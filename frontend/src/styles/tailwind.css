@@ -1,0 +1,154 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Core System Colors */
+    --color-background: #fefefe; /* Pure white */
+    --color-foreground: #1f2937; /* Deep charcoal */
+    --color-border: #e5e7eb; /* Light gray */
+    --color-input: #ffffff; /* White */
+    --color-ring: #ff90bb; /* Warm pink */
+    --color-card: #ffffff; /* Clean white */
+    --color-card-foreground: #1f2937; /* Deep charcoal */
+    --color-popover: #ffffff; /* White */
+    --color-popover-foreground: #1f2937; /* Deep charcoal */
+    --color-muted: #f9fafb; /* Very light gray */
+    --color-muted-foreground: #6b7280; /* Medium gray */
+
+    /* Brand Colors */
+    --color-primary: #ff90bb; /* Warm pink */
+    --color-primary-foreground: #ffffff; /* White */
+    --color-secondary: #8accd5; /* Cool teal */
+    --color-secondary-foreground: #ffffff; /* White */
+    --color-accent: #f8f8e1; /* Neutral cream */
+    --color-accent-foreground: #1f2937; /* Deep charcoal */
+
+    /* Status Colors */
+    --color-success: #10b981; /* Fresh green */
+    --color-success-foreground: #ffffff; /* White */
+    --color-warning: #f59e0b; /* Warm amber */
+    --color-warning-foreground: #ffffff; /* White */
+    --color-error: #ef4444; /* Clear red */
+    --color-error-foreground: #ffffff; /* White */
+    --color-destructive: #ef4444; /* Clear red */
+    --color-destructive-foreground: #ffffff; /* White */
+
+    /* Glass Morphism Variables */
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --glass-shadow: rgba(0, 0, 0, 0.05);
+
+    /* Gradient Variables */
+    --gradient-primary: linear-gradient(135deg, #ff90bb 0%, #8accd5 100%);
+    --gradient-accent: linear-gradient(135deg, #ff90bb 0%, #8accd5 100%);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .font-caption {
+    font-family: 'Nunito Sans', sans-serif;
+  }
+
+  .font-data {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  /* Glass Morphism Components */
+  .glass-card {
+    @apply backdrop-blur-md bg-white/10 border border-white/20 shadow-lg;
+  }
+
+  .glass-button {
+    @apply backdrop-blur-sm bg-white/10 border border-white/20 shadow-lg hover:bg-white/20 transition-all duration-200;
+  }
+
+  .glass-nav {
+    @apply backdrop-blur-md bg-white/80 border-b border-white/20 shadow-sm;
+  }
+
+  /* Gradient Components */
+  .gradient-border {
+    background: var(--gradient-primary);
+    padding: 1px;
+    border-radius: inherit;
+  }
+
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Animation Components */
+  .animate-glass-float {
+    @apply hover:scale-105 transition-transform duration-200;
+  }
+
+  .animate-content-expand {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Loading States */
+  .skeleton-glass {
+    @apply animate-pulse bg-gradient-to-r from-white/5 to-white/20 backdrop-blur-sm;
+  }
+
+  /* Risk Assessment Colors */
+  .risk-low {
+    @apply bg-green-100/20 border-green-300/30 text-green-700;
+  }
+
+  .risk-medium {
+    @apply bg-amber-100/20 border-amber-300/30 text-amber-700;
+  }
+
+  .risk-high {
+    @apply bg-red-100/20 border-red-300/30 text-red-700;
+  }
+}
+
+@layer utilities {
+  /* Custom Shadow Utilities */
+  .shadow-glass {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+
+  .shadow-glass-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  }
+
+  /* Backdrop Blur Utilities */
+  .backdrop-blur-glass {
+    backdrop-filter: blur(12px);
+  }
+
+  /* Custom Gradient Utilities */
+  .bg-gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .border-gradient-primary {
+    border-image: var(--gradient-primary) 1;
+  }
+}
