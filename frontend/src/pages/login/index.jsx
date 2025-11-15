@@ -1,5 +1,3 @@
-// src/pages/auth/index.jsx
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -29,7 +27,6 @@ const Login = () => {
     skinStatus: [],
   });
 
-  // Auto redirect if logged in
   useEffect(() => {
     if (localStorage.getItem("isAuthenticated") === "true") {
       navigate("/profile");
@@ -41,7 +38,6 @@ const Login = () => {
     setErrorMessage("");
 
     try {
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       const savedProfile = JSON.parse(localStorage.getItem("userProfile"));
@@ -119,7 +115,13 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-teal-50 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Soft glowing circles (background) */}
-      <div className="absolute inset-0 opacity-40 pointer-events-none">
+      <div
+        className="absolute inset-0 opacity-40 pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(135deg, rgba(255,144,187,0.5) 0%, rgba(138,204,213,0.5) 100%)",
+        }}
+      >
         <div className="absolute top-20 left-20 w-32 h-32 bg-primary/20 rounded-full blur-3xl animate-pulse" />
         <div
           className="absolute bottom-20 right-20 w-40 h-40 bg-secondary/20 rounded-full blur-3xl animate-pulse"
@@ -133,7 +135,7 @@ const Login = () => {
 
       {/* Main card */}
       <div className="relative w-full max-w-md">
-        <div className="glass-card p-8 rounded-2xl relative overflow-hidden">
+        <div className="glass-card p-8 bg-white/50 rounded-2xl relative overflow-hidden">
           {/* Loading overlay */}
           <LoadingStateOverlay
             isLoading={isLoading}
