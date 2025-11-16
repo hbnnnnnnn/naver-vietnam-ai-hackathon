@@ -10,9 +10,11 @@ import Icon from "../../components/AppIcon";
 import Button from "../../components/ui/Button";
 import AnalysisProgress from "./components/AnalysisProgress";
 
+const API_URL = "http://localhost:5002";
+
 const RoutineRecommendations = () => {
   const [routineType, setRoutineType] = useState("minimal");
-  const [priceRange, setPriceRange] = useState("medium");
+  const [priceRange, setPriceRange] = useState("budget-friendly");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,6 +24,162 @@ const RoutineRecommendations = () => {
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState("upload");
+  const [morningRoutine, setMorningRoutine] = useState(null);
+  const [nightRoutine, setNightRoutine] = useState(null);
+  const [apiError, setApiError] = useState(null);
+  const [uvIndex, setUvIndex] = useState(null);
+  const [uvLevel, setUvLevel] = useState("");
+  const [isLoadingUV, setIsLoadingUV] = useState(false);
+  const [sunscreenProducts, setSunscreenProducts] = useState([]);
+
+  // Fetch UV Index based on user location
+  const fetchUVIndex = async () => {
+    setIsLoadingUV(true);
+    try {
+      // Get user location
+      if (!navigator.geolocation) {
+        console.error("Geolocation not supported");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+
+          const params = new URLSearchParams({
+            latitude: latitude.toString(),
+            longitude: longitude.toString(),
+          });
+
+          const response = await fetch(`${API_URL}/api/weather?${params}`);
+
+          if (!response.ok) {
+            throw new Error(`Weather API error: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          // Get current hour UV index
+          const now = new Date();
+          const currentHourIndex = now.getHours();
+          const currentUV = data.hourly?.uv_index?.[currentHourIndex] || 0;
+
+          setUvIndex(Math.round(currentUV));
+
+          // Determine UV level
+          if (currentUV <= 2) setUvLevel("Low");
+          else if (currentUV <= 5) setUvLevel("Moderate");
+          else if (currentUV <= 7) setUvLevel("High");
+          else if (currentUV <= 10) setUvLevel("Very High");
+          else setUvLevel("Extreme");
+
+          setIsLoadingUV(false);
+
+          // Fetch sunscreen products with UV index and skin type
+          const userProfile = JSON.parse(
+            localStorage.getItem("userProfile") || "{}"
+          );
+          const skinType = userProfile?.skinType?.toLowerCase() || "normal";
+          fetchSunscreenProducts(Math.round(currentUV), skinType);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setIsLoadingUV(false);
+        }
+      );
+    } catch (error) {
+      console.error("Error fetching UV index:", error);
+      setIsLoadingUV(false);
+    }
+  };
+
+  // Fetch UV index when results are shown
+  useEffect(() => {
+    if (showResults) {
+      fetchUVIndex();
+    }
+  }, [showResults]);
+
+  // Fetch sunscreen products from backend using UV index and skin type
+  const fetchSunscreenProducts = async (uvIndex, skinType) => {
+    try {
+      const params = new URLSearchParams({
+        uvIndex: uvIndex?.toString() || "0",
+        skinType: skinType || "normal",
+        priceRange: priceRange || "budget-friendly",
+      });
+
+      const response = await fetch(`${API_URL}/api/products/uv?${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Products API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Transform products with rating and image (limit to top 3)
+      const transformedProducts = data.slice(0, 5).map((product) => ({
+        ...product,
+        id: product._id,
+        rating: product.rating || product.rank || 0,
+        image:
+          product.thumbnail_url ||
+          "https://images.unsplash.com/photo-1616750819456-5cdee9b85d22",
+        imageAlt: `${product.brand} - ${product.name}`,
+      }));
+
+      setSunscreenProducts(transformedProducts);
+    } catch (error) {
+      console.error("Error fetching sunscreen products:", error);
+    }
+  };
+
+  // Fetch routines from backend API
+  const fetchRoutines = async () => {
+    setIsLoading(true);
+    setApiError(null);
+
+    try {
+      // Get user's skin type from localStorage
+      const userProfile = JSON.parse(
+        localStorage.getItem("userProfile") || "{}"
+      );
+      const skinType = userProfile?.skinType?.toLowerCase() || "normal";
+
+      const params = new URLSearchParams({
+        skinType: skinType,
+        strategy: routineType,
+        budgetRange: priceRange,
+      });
+
+      const response = await fetch(`${API_URL}/api/routines?${params}`);
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Separate morning and night routines
+      const morningData = data.routines?.find((r) => r.name === "morning");
+      const nightData = data.routines?.find((r) => r.name === "night");
+
+      setMorningRoutine(morningData);
+      setNightRoutine(nightData);
+    } catch (error) {
+      console.error("Error fetching routines:", error);
+      setApiError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle filter changes
+  useEffect(() => {
+    if (showResults) {
+      fetchRoutines();
+    }
+  }, [routineType, priceRange, showResults]);
 
   // Mock routine data
   const routineData = {
@@ -305,28 +463,18 @@ const RoutineRecommendations = () => {
     ],
   };
 
-  // Handle filter changes
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [routineType, priceRange]);
-
   // Handle category click
-  const handleCategoryClick = (category) => {
-    setSelectedCategory(category);
+  const handleCategoryClick = (step) => {
+    setSelectedCategory(step);
     setIsModalOpen(true);
     setIsProductsLoading(true);
 
-    // Simulate API call
+    // Use products from the step
     setTimeout(() => {
-      const products =
-        mockProducts?.[category?.category] || mockProducts?.["Gentle Cleanser"];
+      const products = step?.products || [];
       setModalProducts(products);
       setIsProductsLoading(false);
-    }, 1000);
+    }, 500);
   };
 
   // Handle analysis start with progress
@@ -338,11 +486,11 @@ const RoutineRecommendations = () => {
 
     // Progress simulation with steps matching AnalysisProgress
     const progressSteps = [
-      { progress: 15, delay: 500, step: "upload" },
-      { progress: 35, delay: 900, step: "ocr" },
-      { progress: 60, delay: 1100, step: "analysis" },
-      { progress: 85, delay: 1000, step: "risk" },
-      { progress: 100, delay: 700, step: "complete" },
+      { progress: 15, delay: 300, step: "upload" },
+      { progress: 35, delay: 700, step: "ocr" },
+      { progress: 60, delay: 800, step: "analysis" },
+      { progress: 85, delay: 600, step: "risk" },
+      { progress: 100, delay: 500, step: "complete" },
     ];
 
     progressSteps
@@ -362,6 +510,9 @@ const RoutineRecommendations = () => {
         setTimeout(() => {
           setIsAnalyzing(false);
           setShowResults(true);
+
+          // Fetch routines after showing results
+          fetchRoutines();
 
           // Auto scroll to results
           setTimeout(() => {
@@ -384,7 +535,68 @@ const RoutineRecommendations = () => {
       });
   };
 
-  const currentRoutine = routineData?.[routineType] || routineData?.minimal;
+  // Transform backend data to frontend format
+  const transformRoutineSteps = (routine) => {
+    if (!routine || !routine.steps) return [];
+
+    return routine.steps.map((step, index) => {
+      const products = step.products || [];
+      const firstProduct = products[0];
+
+      // Map step names to descriptions as fallback
+      const descriptionMap = {
+        Cleanse: "Cleanses skin without drying",
+        "Double Cleanse": "Removes dirt and makeup",
+        Treatment: "Addresses specific skin concerns",
+        Treat: "Nourishes skin overnight",
+        "Eye Care": "Cares for sensitive eye area",
+        Moisturize: "Provides essential hydration",
+        Sunscreen: "Protects skin from UV rays",
+        "Night Mask": "Intensive overnight treatment",
+      };
+
+      // Map step names to timing
+      const timingMap = {
+        Cleanse: "1-2 minutes",
+        "Double Cleanse": "2 minutes",
+        Treatment: "30 seconds",
+        Treat: "30 seconds",
+        "Eye Care": "30 seconds",
+        Moisturize: "1 minute",
+        Sunscreen: "30 seconds",
+        "Night Mask": "1-2 minutes",
+      };
+
+      const description =
+        step.description || descriptionMap[step.name] || "Skincare treatment";
+      const timing = timingMap[step.name] || "1-2 minutes";
+
+      // Convert products and add rating, image
+      const productsWithRating = products.map((product) => {
+        return {
+          ...product,
+          rating: product.rank || 0,
+          image:
+            product.thumbnail_url ||
+            "https://images.unsplash.com/photo-1735286770188-de4c5131589a",
+          imageAlt: `${product.brand} - ${product.name}`,
+        };
+      });
+
+      return {
+        id: index + 1,
+        category: step.name || "Step",
+        description: description,
+        timing: timing,
+        purpose: step.name || "Treatment",
+        products: productsWithRating,
+        rank: firstProduct?.rank || 0,
+      };
+    });
+  };
+
+  const morningSteps = transformRoutineSteps(morningRoutine);
+  const nightSteps = transformRoutineSteps(nightRoutine);
 
   return (
     <>
@@ -436,7 +648,7 @@ const RoutineRecommendations = () => {
               size="lg"
               onClick={handleAnalysisStart}
               disabled={isAnalyzing}
-              className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-11"
+              className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-6"
               iconName="Camera"
               iconPosition="left"
               iconSize={20}
@@ -456,21 +668,53 @@ const RoutineRecommendations = () => {
           {showResults && (
             <div id="results-section">
               {/* Routine Comparison */}
-              {routineType && priceRange && (
+              {/* {routineType && priceRange && (
                 <RoutineComparison
                   routineType={routineType}
                   priceRange={priceRange}
                 />
-              )}
+              )} */}
 
-              <Sunscreen onOpenSuggestions={handleCategoryClick} />
+              <Sunscreen
+                onOpenSuggestions={() =>
+                  handleCategoryClick({
+                    category: "Sunscreen",
+                    description: "Protects skin from UV rays",
+                    products: sunscreenProducts,
+                  })
+                }
+                uvIndex={uvIndex}
+                uvLevel={uvLevel}
+                isLoading={isLoadingUV}
+              />
+
+              {/* Error Message */}
+              {apiError && (
+                <div className="glass-card p-6 rounded-3xl mb-8 bg-red-50">
+                  <div className="flex items-center space-x-3">
+                    <Icon
+                      name="AlertCircle"
+                      size={24}
+                      className="text-red-600"
+                    />
+                    <div>
+                      <h4 className="font-medium text-red-900">
+                        Unable to load routines
+                      </h4>
+                      <p className="text-sm text-red-700">
+                        Please ensure the backend server is running on port 5002
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Routine Cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                 <RoutineCard
                   title="Morning Routine"
                   timeOfDay="morning"
-                  steps={currentRoutine?.morning}
+                  steps={morningSteps}
                   onCategoryClick={handleCategoryClick}
                   isLoading={isLoading}
                 />
@@ -478,7 +722,7 @@ const RoutineRecommendations = () => {
                 <RoutineCard
                   title="Evening Routine"
                   timeOfDay="evening"
-                  steps={currentRoutine?.evening}
+                  steps={nightSteps}
                   onCategoryClick={handleCategoryClick}
                   isLoading={isLoading}
                 />

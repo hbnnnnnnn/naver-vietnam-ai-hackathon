@@ -39,7 +39,7 @@ const RoutineCard = ({
 
   return (
     <div
-      className={`rounded-3xl glass-card p-6 bg-gradient-to-br ${getGradientClass()}`}
+      className={`rounded-3xl glass-card p-6 bg-gradient-to-br ${getGradientClass()}  flex flex-col h-full`}
     >
       <div className="flex items-center space-x-3 mb-6">
         <div className={`p-2 rounded-lg bg-white/20 ${getTimeColor()}`}>
@@ -79,11 +79,11 @@ const RoutineCard = ({
                     <div className="flex items-center space-x-4 mt-1">
                       <span className="text-xs text-muted-foreground flex items-center space-x-1">
                         <Icon name="Clock" size={12} />
-                        <span>{step?.timing}</span>
+                        <span>{step?.timing || "N/A"}</span>
                       </span>
                       <span className="text-xs text-muted-foreground flex items-center space-x-1">
                         <Icon name="Target" size={12} />
-                        <span>{step?.purpose}</span>
+                        <span>{step?.purpose || "N/A"}</span>
                       </span>
                     </div>
                   </div>
@@ -98,12 +98,24 @@ const RoutineCard = ({
           </div>
         ))}
       </div>
-      <div className="mt-6 pt-4 border-t border-white/20">
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
+      <div className="mt-auto pt-4 border-t border-white/20">
+        <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
           <span className="flex items-center space-x-1">
             <Icon name="Timer" size={14} />
             <span>
-              Total time: {steps?.length * 2}-{steps?.length * 3} minutes
+              Total time:{" "}
+              {steps
+                ?.reduce((total, step) => {
+                  const timing = step?.timing || "0";
+                  if (timing.includes("seconds")) {
+                    return total + parseFloat(timing) / 60; // Convert seconds to minutes
+                  } else if (timing.includes("minute")) {
+                    return total + parseFloat(timing);
+                  }
+                  return total;
+                }, 0)
+                .toFixed(0)}{" "}
+              minutes
             </span>
           </span>
           <span className="flex items-center space-x-1">

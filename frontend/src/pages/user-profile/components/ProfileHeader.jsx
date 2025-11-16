@@ -49,6 +49,7 @@ const ProfileHeader = ({ userProfile, onUpdateProfile }) => {
       style={{
         backgroundImage:
           "linear-gradient(135deg, rgba(255,144,187,0.15) 0%, rgba(138,204,213,0.15) 100%)",
+        marginTop: "-70px",
       }}
     >
       <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
@@ -91,7 +92,7 @@ const ProfileHeader = ({ userProfile, onUpdateProfile }) => {
                   }
                 />
                 <Select
-                  label="Primary Statuss"
+                  label="Primary Status"
                   options={skinStatusOptions}
                   value={editedProfile?.primaryStatus}
                   onChange={(value) =>

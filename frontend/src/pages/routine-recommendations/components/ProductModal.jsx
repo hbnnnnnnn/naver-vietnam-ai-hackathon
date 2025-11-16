@@ -110,17 +110,22 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
 
                         <div className="space-y-2 h-20">
                           <h4 className="text-sm font-medium text-foreground">
-                            Key Benefits:
+                            Key Ingredients:
                           </h4>
-                          <div className="flex flex-wrap gap-1">
-                            {product?.benefits
+                          <div
+                            className="flex flex-wrap gap-1 overflow-hidden"
+                            style={{ maxHeight: "3rem" }}
+                          >
+                            {product?.ingredients
                               ?.slice(0, 3)
-                              ?.map((benefit, index) => (
+                              ?.map((ingredient, index) => (
                                 <span
                                   key={index}
                                   className="px-2 py-1 text-xs bg-gradient-primary/20 text-primary rounded-full"
                                 >
-                                  {benefit}
+                                  {ingredient.length > 50
+                                    ? `${ingredient.substring(0, 50)}...`
+                                    : ingredient}
                                 </span>
                               ))}
                           </div>

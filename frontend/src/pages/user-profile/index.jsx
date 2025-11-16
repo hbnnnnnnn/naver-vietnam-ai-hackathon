@@ -300,7 +300,7 @@ const UserProfileDashboard = () => {
               <div className="flex items-center gap-3">
                 <Button
                   variant="default"
-                  onClick={() => navigate("/product-upload-scanner")}
+                  onClick={() => navigate("/product")}
                   iconName="Scan"
                   iconPosition="left"
                   className="rounded-3xl shadow-glow"
@@ -309,7 +309,7 @@ const UserProfileDashboard = () => {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => navigate("/ai-skincare-chatbot")}
+                  onClick={() => navigate("/chatbot")}
                   iconName="MessageCircle"
                   iconPosition="left"
                   className="rounded-3xl hover:bg-[rgba(255,144,187,0.2)]"

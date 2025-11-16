@@ -14,25 +14,40 @@ const FilterControls = ({
       description: "Suitable for busy individuals",
     },
     {
-      value: "comprehensive",
-      label: "Comprehensive routine (7-10 steps)",
+      value: "complete",
+      label: "Complete routine (7-10 steps)",
       description: "Deep skincare routine",
+    },
+    {
+      value: "focus_treatment",
+      label: "Focus on treatment",
+      description: "Target specific skin concerns",
+    },
+    {
+      value: "focus_hydration",
+      label: "Focus on hydration",
+      description: "Deep moisture and hydration",
+    },
+    {
+      value: "anti_aging",
+      label: "Anti-aging routine",
+      description: "Prevent and reduce signs of aging",
     },
   ];
 
   const priceOptions = [
     {
-      value: "low",
+      value: "budget-friendly",
       label: "Budget-friendly (100,000 - 500,000 VND)",
       description: "Affordable products",
     },
     {
-      value: "medium",
+      value: "mid-range",
       label: "Mid-range (500,000 - 1,500,000 VND)",
       description: "Good quality, reasonable price",
     },
     {
-      value: "high",
+      value: "premium",
       label: "Premium (1,500,000+ VND)",
       description: "High-end, effective products",
     },
