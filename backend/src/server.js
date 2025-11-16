@@ -6,7 +6,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
 import userRoutes from './routes/user.route.js';
-import ocrRoutes from './routes/ocr.route.js';
+import productAnalyzeRoutes from './routes/productAnalyze.route.js';
 
 const app = express();
 
@@ -34,7 +34,7 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api/users', userRoutes);
-app.use('/api/ocr', ocrRoutes);
+app.use('/api/product-analyze', productAnalyzeRoutes);
 // app.use('/api/routines', routineRoutes); // TODO: Create routine routes
 
 app.get('/', (req, res) => res.send('Backend alive'));
