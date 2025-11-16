@@ -9,6 +9,7 @@ import userRoutes from './routes/user.route.js';
 import weatherRoutes from './routes/weather.route.js'
 import productRoutes from './routes/product.route.js';
 import routineRoutes from './routes/routine.route.js';
+import productAnalyzeRoutes from './routes/productAnalyze.route.js';
 
 const app = express();
 
@@ -38,7 +39,9 @@ app.use(morgan('dev'));
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/weather', weatherRoutes);
- app.use('/api/routines', routineRoutes);
+app.use('/api/routines', routineRoutes);
+app.use('/api/product-analyze', productAnalyzeRoutes);
+// app.use('/api/routines', routineRoutes); // TODO: Create routine routes
 
 app.get('/', (req, res) => res.send('Backend alive'));
 
