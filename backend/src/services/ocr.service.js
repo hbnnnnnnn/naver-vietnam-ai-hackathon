@@ -1,42 +1,39 @@
-import { callNaverOcr, matchIngredientsWithFuzzy, extractIngredientsFromText, sortFieldsByPosition, buildLinesFromFields, cleanAndSplitIngredients } from "../utils/ocrLogic.js";
+import { callNaverOcr, sortFieldsByPosition, buildLinesFromFields } from "../utils/ocrLogic.js";
 import IngredientCosing from "../models/ingredientCosing.js";
+import { extractIngredientsFromText, cleanAndSplitIngredients, matchIngredientsWithFuzzy } from "../utils/ocrLogic.js";
 import { fileURLToPath } from 'url';
 import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export async function extractIngredientsService(secretKey, apiUrl, imagePath, imageFormat = 'png') {
-  try {
-    if (!secretKey || !apiUrl || !imagePath) throw new Error('Missing required parameters');
+// Pure OCR service: returns OCR data from image
+export async function runOcrService(secretKey, apiUrl, imagePath, imageFormat = 'png') {
+  if (!secretKey || !apiUrl || !imagePath) throw new Error('Missing required parameters');
+  return await callNaverOcr({ secretKey, apiUrl, imagePath, imageFormat });
+}
 
-    const ocrData = await callNaverOcr({ secretKey, apiUrl, imagePath, imageFormat });
-    if (!ocrData?.images?.[0]?.fields) throw new Error('Invalid OCR response');
+// Ingredient extraction from OCR text
+export async function extractIngredientsFromTextService(ocrText) {
+  if (!ocrText) throw new Error('No OCR text provided');
+  const ingredientsBlock = extractIngredientsFromText(ocrText);
+  const tokens = cleanAndSplitIngredients(ingredientsBlock).map(t => t.toLowerCase());
+  const ingredientDocs = await IngredientCosing.find({}, 'inci_normalized inci_name').lean();
+  const normalizedList = ingredientDocs.map(d => d.inci_normalized).filter(Boolean);
+  const matchedNormalized = await matchIngredientsWithFuzzy(tokens, normalizedList, 75);
+  const matchedNames = ingredientDocs
+    .filter(d => matchedNormalized.includes(d.inci_normalized))
+    .map(d => d.inci_name || d.inci_normalized);
+  return {
+    success: true,
+    ingredients: matchedNames
+  };
+}
 
-    const sorted = sortFieldsByPosition(ocrData.images[0].fields);
-    const lines = buildLinesFromFields(sorted);
-    const fullText = lines.join('\n');
-
-    const ingredientsBlock = extractIngredientsFromText(fullText);
-    const tokens = cleanAndSplitIngredients(ingredientsBlock).map(t => t.toLowerCase());
-
-    // Query your ingredient collection for normalized names
-    const ingredientDocs = await IngredientCosing.find({}, 'inci_normalized inci_name').lean();
-    const normalizedList = ingredientDocs.map(d => d.inci_normalized).filter(Boolean);
-
-    const matchedNormalized = await matchIngredientsWithFuzzy(tokens, normalizedList, 75);
-
-    // Map normalized back to display names
-    const matchedNames = ingredientDocs
-      .filter(d => matchedNormalized.includes(d.inci_normalized))
-      .map(d => d.inci_name || d.inci_normalized);
-
-    return {
-      success: true,
-      ingredients: matchedNames
-    };
-  } catch (err) {
-    console.error('extractIngredientsService err', err);
-    return { success: false, error: err.message, ingredients_found: 0, ingredients: [] };
-  }
+// Utility to get full OCR text from OCR data
+export function getOcrTextFromData(ocrData) {
+  if (!ocrData?.images?.[0]?.fields) throw new Error('Invalid OCR response');
+  const sorted = sortFieldsByPosition(ocrData.images[0].fields);
+  const lines = buildLinesFromFields(sorted);
+  return lines.join('\n');
 }
