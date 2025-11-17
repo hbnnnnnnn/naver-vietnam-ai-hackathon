@@ -10,8 +10,8 @@ export default defineConfig({
   },
   plugins: [tsconfigPaths(), react()],
   server: {
-    port: 3000,
+    port: 5173,
     host: "0.0.0.0",
-    strictPort: false, // This allows Vite to try other ports if 3000 is in use
+    strictPort: false,
   },
 });
