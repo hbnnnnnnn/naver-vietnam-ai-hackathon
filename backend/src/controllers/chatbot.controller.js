@@ -14,17 +14,25 @@ const chatbot = new ClovaChatbot(
 export const sendMessageToChatbot = async (req, res) => {
     try {
         const { message, userId } = req.body;
-        if (!message || !userId) {
-            return res.status(400).json({ error: 'Message and UserID is required.' });
+        if (!userId) {
+            return res.status(400).json({ error: 'UserID is required.' });
         }
         const response = await chatbot.sendMessage(message, userId);
-        console.log('Success response:', response);
         return res.status(200).json(response);
 
     } catch (error) {
-        console.error('Full error:', error);
-        console.error('Error response:', error.response?.data);
-        console.error('Error status:', error.response?.status);
+        res.status(500).json({ 
+            error: error.message,
+            details: error.response?.data 
+        });
+    }
+}
+
+export const getOpenMessage = async (req, res) => {
+    try {
+        const response = await chatbot.openMessage();
+        return res.status(200).json(response);
+    } catch (error) {
         res.status(500).json({ 
             error: error.message,
             details: error.response?.data 
