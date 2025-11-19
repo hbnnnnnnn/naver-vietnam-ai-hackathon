@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "csv-parser": "^3.2.0",
+    "openmeteo": "^1.2.2"
+  }
+}

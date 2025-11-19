@@ -18,12 +18,15 @@ const ingredientAISchema = new mongoose.Schema({
     },
     good_for: {
         type: [String],
+        enum: ['oily', 'dry', 'combination', 'sensitive', 'normal'
+            ,"acne", "aging", "pigmentation", "sensitivity", "oiliness", "dryness"
+        ], 
         default: []
     },
     risk_level: {
         type: String,
-        enum: ['No-risk', 'Low-risk', 'Moderate-risk', 'High-risk', 'Unknown'],
-        default: 'Unknown'
+        enum: ['no-risk', 'low-risk', 'moderate-risk', 'high-risk', 'unknown'],
+        default: 'unknown'
     },
     reason: {
         type: String,
