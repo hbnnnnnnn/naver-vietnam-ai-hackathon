@@ -24,10 +24,7 @@ export async function extractIngredientsFromTextService(ocrText) {
   const matchedNames = ingredientDocs
     .filter(d => matchedNormalized.includes(d.inci_normalized))
     .map(d => d.inci_name || d.inci_normalized);
-  return {
-    success: true,
-    ingredients: matchedNames
-  };
+  return matchedNames
 }
 
 // Utility to get full OCR text from OCR data

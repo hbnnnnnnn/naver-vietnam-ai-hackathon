@@ -44,6 +44,7 @@ app.use('/api/routines', routineRoutes);
 app.use('/api/product-analyze', productAnalyzeRoutes);
 app.use('/api/chatbot', chatbotRoutes)
 
+
 app.get('/', (req, res) => res.send('Backend alive'));
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/skincare-app';

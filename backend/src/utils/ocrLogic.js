@@ -41,83 +41,6 @@ export async function callNaverOcr({ secretKey, apiUrl, imagePath, imageFormat =
   }
 }
 
-/**
- * Extracts all text from OCR JSON response
- * @param {Object} ocrJson - OCR response JSON
- * @returns {string} Combined text from all fields
- */
-export function extractAllText(ocrJson) {
-  if (!ocrJson?.images) {
-    console.warn('No images found in OCR response');
-    return '';
-  }
-
-  const texts = [];
-  for (const img of ocrJson.images) {
-    for (const field of img.fields || []) {
-      if (field.inferText) {
-        texts.push(field.inferText.trim());
-      }
-    }
-  }
-  return texts.join(" ");
-}
-
-/**
- * Extracts ingredients block from full text using pattern matching
- * @param {string} fullText - Full OCR text
- * @returns {string} Extracted ingredients text
- */
-export function extractIngredientsBlock(fullText) {
-  if (!fullText || typeof fullText !== 'string') {
-    return '';
-  }
-
-  const stopwords = [
-    "Directions", "Caution", "Warning", "How to use", "Storage", 
-    "주의", "사용방법", "용량", "화장품책임판매업자"
-  ];
-  
-  const ingredientsPattern = /(ingredients?|성분|成分)[\s:：\-]*([A-Za-z0-9,.\-\s()%\/]+)/i;
-  const match = fullText.match(ingredientsPattern);
-
-  let ingredientsText = "";
-  if (match && match[2]) {
-    ingredientsText = match[2];
-  } else {
-    const alternativeMatch = fullText.match(/([A-Z][a-z]+\s?[A-Za-z0-9\-\(\)%]*,){5,}/);
-    if (alternativeMatch) {
-      ingredientsText = alternativeMatch[0];
-    }
-  }
-
-  // Remove content after stop words
-  for (const stopword of stopwords) {
-    const stopIndex = String(ingredientsText).toLowerCase().indexOf(String(stopword).toLowerCase());
-    if (stopIndex !== -1) {
-      ingredientsText = ingredientsText.slice(0, stopIndex);
-    }
-  }
-
-  return ingredientsText.trim();
-}
-
-/**
- * Cleans and splits ingredient list into individual ingredients
- * @param {string} text - Raw ingredients text
- * @returns {string[]} Array of cleaned ingredient names
- */
-export function cleanIngredientList(text) {
-  if (!text || typeof text !== 'string') {
-    return [];
-  }
-
-  return text
-    .split(/[;,]/)
-    .map((ingredient) => ingredient.replace(/[^A-Za-z0-9\-\s()%/]/g, "").trim())
-    .filter((ingredient) => ingredient.length > 1);
-}
-
 // Improved cleaning & splitting for ingredient extraction
 export function cleanAndSplitIngredients(ingredientsText) {
   let parts = ingredientsText.split(/[,\n]+/).map(p => p.trim()).filter(Boolean);
@@ -215,16 +138,42 @@ export function buildLinesFromFields(sortedFields) {
     });
 }
 
+// Shared pattern constants for ingredient extraction
 const HEADER_PATTERNS = [
-  /전\s*성\s*분/i,
-  /성\s*분/i,
-  /ingredients?/i,
-  /full\s*ingredients?/i,
-  /ingredient\s*list/i,
+  /\bingredients?\s*[:：\-]?\s*/i,
+  /\bfull\s+ingredients?\s*[:：\-]?\s*/i,
+  /\bingredient\s+list\s*[:：\-]?\s*/i,
+  /전\s*성\s*분\s*[:：\-]?\s*/i,
+  /성\s*분\s*[:：\-]?\s*/i,
 ];
+
 const END_MARKERS = [
-  '용량', '사용법', '화장품책임판매업자', '피엘인터내셔널',
-  'directions', 'how to use', 'usage', 'manufacturer', 'distributor', 'volume'
+  // Product/company info
+  /\b(?:is\s+a\s+)?registered\s+trademark/i,
+  /\btrademarks?\s+of/i,
+  /\bdistributed\s+by\b/i,
+  /\bmanufactured\s+(?:by|for)\b/i,
+  /\bref\.\s*no/i,
+  /\blot\s*[:：]/i,
+  // Section headers
+  /\bdirections?\s*[:：]/i,
+  /\bhow\s+to\s+use\s*[:：]/i,
+  /\busage\s*[:：]/i,
+  /\bcautions?\s*[:：]/i,
+  /\bwarnings?\s*[:：]/i,
+  /\bstorage\s*[:：]/i,
+  /\bnet\s+(?:weight|wt|content)/i,
+  /\bvolume\s*[:：]/i,
+  /\bmade\s+in\b/i,
+  // Korean markers
+  /용\s*량/i,
+  /사\s*용\s*법/i,
+  /사\s*용\s*방\s*법/i,
+  /화\s*장\s*품\s*책\s*임\s*판\s*매\s*업\s*자/i,
+  /피\s*엘\s*인\s*터\s*내\s*셔\s*널/i,
+  /주\s*의/i,
+  /보\s*관\s*방\s*법/i,
+  /제\s*조\s*업\s*체/i,
 ];
 
 // --- Text extraction ---
@@ -232,34 +181,41 @@ export function extractIngredientsFromText(fullText) {
   if (!fullText || typeof fullText !== 'string') return '';
 
   // normalize whitespace
-  const normalized = fullText.replace(/[\u00A0\t\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const normalized = fullText.replace(/[\u00A0\t\r]+/g, ' ').replace(/ +/g, ' ').trim();
 
   // find header
   let start = -1;
   for (const re of HEADER_PATTERNS) {
     const m = re.exec(normalized);
-    if (m) { start = m.index + (m[0].length); break; }
+    if (m) { start = m.index + m[0].length; break; }
   }
 
-  let tail = normalized.slice(start === -1 ? 0 : start);
+  // If no header found, return empty
+  if (start === -1) return '';
 
-  // cut at first end marker occurrence (best effort)
-  const lowTail = tail.toLowerCase();
-  let endIdx = -1;
-  for (const em of END_MARKERS) {
-    const i = lowTail.indexOf(em);
-    if (i !== -1 && (endIdx === -1 || i < endIdx)) endIdx = i;
+  let tail = normalized.slice(start);
+
+  // cut at first end marker occurrence using regex patterns
+  let endIdx = tail.length;
+  for (const emPattern of END_MARKERS) {
+    const m = emPattern.exec(tail);
+    if (m && m.index > 0 && m.index < endIdx) {
+      endIdx = m.index;
+    }
   }
-  if (endIdx !== -1) tail = tail.slice(0, endIdx);
+  tail = tail.slice(0, endIdx);
 
-  // Remove artifact tokens commonly inserted by OCR (logos, percent boxes, stray punctuation)
-  // Keep parentheses but remove content that looks like visual artifacts like: "(0.1%)" is okay, but "(주)" is local company marker -> keep numbers and chemical-style parentheses
+  // Remove artifact tokens commonly inserted by OCR
   tail = tail.replace(/\s?\[[^\]]*\]/g, ' '); // remove bracketed artifacts
+  tail = tail.replace(/\b\d{6,}\b/g, ' '); // remove long numbers (lot/ref numbers)
+  
+  // Normalize whitespace
+  tail = tail.replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ');
 
   // collapse repeated separators like '.,' and trim
   tail = tail.replace(/[\.]{2,}/g, '.').replace(/\s*[,;]+\s*/g, ', ').trim();
 
-  return tail.replace(/^[:\-\s]+|[:\-\s]+$/g, '').trim();
+  return tail.replace(/^[:\-\s,;]+|[:\-\s,;]+$/g, '').trim();
 }
 
 // --- Cleaning & splitting ---
