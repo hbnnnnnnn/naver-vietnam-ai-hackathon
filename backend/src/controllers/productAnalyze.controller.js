@@ -42,7 +42,10 @@ export const productAnalyzeFromImages = async (req, res) => {
         if (!acc[riskLevel]) {
             acc[riskLevel] = [];
         }
-        acc[riskLevel].push(ingredient);
+        acc[riskLevel].push({
+            name: ingredient.name,
+            reason: ingredient.reason
+        });
         return acc;
     }, {});
 
@@ -62,6 +65,7 @@ export const productAnalyzeFromImages = async (req, res) => {
         status: 'success',
         data: {
             product: enrichedProductInfo,
+            suitable: null,
             risk: groupedByRisk,
             ingredients: ingredientResult
         }
