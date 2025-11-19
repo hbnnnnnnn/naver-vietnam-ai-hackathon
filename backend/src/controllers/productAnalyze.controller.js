@@ -1,6 +1,7 @@
 import { runOcrService, getOcrTextFromData } from '../services/ocr.service.js';
 import { extractIngredientsFromTextService } from '../services/ingredientExtract.service.js';
 import { extractProductInfoFromTextService } from '../services/productInfoExtract.service.js';
+import { summarizeBenefitsFromIngredients } from '../services/benefitSummarization.service.js';
 import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -35,14 +36,33 @@ export const productAnalyzeFromImages = async (req, res) => {
 
     // Extract ingredients from back image OCR text
     const ingredientResult = await extractIngredientsFromTextService(backOcrText);
+    
+    const groupedByRisk = ingredientResult.reduce((acc, ingredient) => {
+        const riskLevel = ingredient.risk_level || 'Unknown';
+        if (!acc[riskLevel]) {
+            acc[riskLevel] = [];
+        }
+        acc[riskLevel].push(ingredient);
+        return acc;
+    }, {});
+
+    // Extract product info from front image OCR text
     const productInfo = await extractProductInfoFromTextService(frontOcrText);
+    
+    // Summarize benefits from ingredients using LLM
+    const summarizedBenefits = await summarizeBenefitsFromIngredients(ingredientResult);
+    
+    // Enrich product info by combining original benefits with ingredient-based benefits
+    const enrichedProductInfo = {
+        ...productInfo,
+        benefits: [...productInfo.benefits, ...summarizedBenefits]
+    };
     
     res.json({
         status: 'success',
         data: {
-            product: productInfo,
-            risk: {},
-            suitable: {},
+            product: enrichedProductInfo,
+            risk: groupedByRisk,
             ingredients: ingredientResult
         }
     });
