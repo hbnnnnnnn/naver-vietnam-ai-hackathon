@@ -44,17 +44,7 @@ export default class ClovaChatbot {
         timeout: 10000
       });
 
-      const replyBubble = response.data.bubbles?.[0];
-      if (!replyBubble) return 'No response';
-
-      if (replyBubble.type === 'text') {
-        return replyBubble.data.description;
-      }
-      if (replyBubble.type === 'template' && replyBubble.data?.cover?.data?.description) {
-        return replyBubble.data.cover.data.description;
-      }
-
-      return 'Rich message received (buttons/image)';
+      return response.data;
     } catch (error) {
       console.error('CLOVA Chatbot Error:', error.response?.data || error.message);
       throw error;
