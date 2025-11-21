@@ -3,7 +3,7 @@ import axios from 'axios';
 
 export default class ClovaChatbot {
   constructor(invokeUrl, secretKey) {
-    this.invokeUrl = invokeUrl.endsWith('/') ? invokeUrl : invokeUrl + '/';
+    this.invokeUrl = invokeUrl;
     this.secretKey = secretKey;
   }
 
