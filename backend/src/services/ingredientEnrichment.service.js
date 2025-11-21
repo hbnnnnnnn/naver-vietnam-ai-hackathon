@@ -32,7 +32,6 @@ export async function enrichIngredientsWithDetails(ingredientNames) {
 
   // Step 3: Call HYPER CLOVA LLM for remaining ingredients in batches and cache results
   if (stillMissing.length > 0) {
-    console.log(`[ENRICH] Processing ${stillMissing.length} missing ingredients with LLM`);
     try {
       const BATCH_SIZE = 5;
       const batches = [];
@@ -41,12 +40,10 @@ export async function enrichIngredientsWithDetails(ingredientNames) {
       }
 
       // Process all batches in parallel
-      console.log(`[ENRICH] Split into ${batches.length} batches of max ${BATCH_SIZE}`);
       const batchPromises = batches.map((batch, idx) => {
         return fetchIngredientFromLLM(batch);
       });
       const batchResults = await Promise.all(batchPromises);
-      console.log(`[ENRICH] All batches completed`);
       
       const llmResults = batchResults.flat();
       

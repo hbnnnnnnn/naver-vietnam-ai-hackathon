@@ -44,52 +44,92 @@ export async function callNaverOcr({ secretKey, apiUrl, imagePath, imageFormat =
 
 // Improved cleaning & splitting for ingredient extraction
 export function cleanAndSplitIngredients(ingredientsText) {
-  let parts = ingredientsText.split(/[,\n]+/).map(p => p.trim()).filter(Boolean);
+  if (!ingredientsText) return [];
+  
+  // Pre-processing: handle common OCR issues
+  let cleaned = ingredientsText;
+  
+  // Remove brackets and their content
+  cleaned = cleaned.replace(/[\[\]]/g, ' ');
+  
+  // Fix common broken words from OCR - must do this BEFORE splitting
+  const brokenWordFixes = [
+    ['METHYLCELLU\\s+LOSE', 'METHYLCELLULOSE'],
+    ['HYDROXYPR\\s*OPYL', 'HYDROXYPROPYL'],
+    ['HYDROXYPR\\s*OPYLTRIMONIUM', 'HYDROXYPROPYLTRIMONIUM'],
+    ['SO\\s+DIUM', 'SODIUM'],
+    ['DIUM\\s+CHLORIDE', 'SODIUM CHLORIDE'],
+    ['HYALUR\\s*ONATE', 'HYALURONATE'],
+    ['HYALUR\\s*ONIC', 'HYALURONIC'],
+    ['1\\.2-HEXANE-\\s*DIOL', '1,2-HEXANEDIOL'],
+    ['BUTYLENE\\s+GLYCOL\\s+DIOL', 'BUTYLENE GLYCOL'],
+    ['MALACHITE\\s+SO\\s+OPYLTRIMONIUM', 'MALACHITE'],
+    ['LOSE\\s+METHYLCELLU', 'METHYLCELLULOSE'],
+  ];
+  
+  brokenWordFixes.forEach(([broken, fixed]) => {
+    const regex = new RegExp(broken, 'gi');
+    cleaned = cleaned.replace(regex, fixed);
+  });
+  
+  // Remove concentration parentheses and their content
+  cleaned = cleaned.replace(/\([^)]*(?:ppm|ppb|%|mg)\)/gi, '');
+  
+  // Split by commas, periods, and line breaks
+  let parts = cleaned.split(/[,\.\n]+/).map(p => p.trim()).filter(Boolean);
 
-  // Step 2: further split parts that contain '/' or ' / ' (leaf/stem) but keep those meaningful
-  parts = parts.flatMap(p => p.split(/\s*\/\s*/).map(s => s.trim()));
+  // Further split parts that contain '/' (e.g., leaf/stem)
+  parts = parts.flatMap(p => {
+    // Skip splitting if it looks like a chemical notation (e.g., CI 77491)
+    if (/^CI\s*\d+/i.test(p)) return [p];
+    return p.split(/\s*\/\s*/).map(s => s.trim());
+  });
 
-  // Step 3: split by capitalized boundaries when commas absent
-  const expanded = [];
-  for (const part of parts) {
-    if (part.match(/,/) || part.split(' ').length > 1) {
-      expanded.push(part);
-    } else {
-      // single-word part — keep
-      expanded.push(part);
-    }
-  }
-
-  // Step 4: repair some common OCR join/split issues
-  // Merge tokens that look like they belong together: e.g., 'sodium' followed by 'hyaluronate' as separate items
-  // We'll do a simple pass: whenever we see short tokens likely part of a multiword name, join with neighbor
+  // Repair common OCR join/split issues
   const repaired = [];
-  for (let i = 0; i < expanded.length; i++) {
-    let tok = expanded[i];
-    // remove stray periods and multiple spaces
-    tok = tok.replace(/^\.|\.$/g, '').replace(/\s+/g, ' ').trim();
+  for (let i = 0; i < parts.length; i++) {
+    let tok = parts[i];
+    
+    // Clean up the token
+    tok = tok.replace(/^[\-\.]+|[\-\.]+$/g, '').replace(/\s+/g, ' ').trim();
+    
     if (isNoiseToken(tok)) continue;
 
-    // If the token is a single known "first word" that commonly prefixes a multiword INCI, merge with next
-    const firstWords = ['sodium','bis','ethyl','butyl','propyl','iso','hydroxyethyl','beta','alpha','panax','centella','madecassic','asiatic'];
-    const words = tok.split(' ');
-    if (words.length === 1 && i + 1 < expanded.length) {
-      const next = expanded[i + 1].replace(/\s+/g, ' ').trim();
+    // Merge multi-word ingredient names that were split
+    const firstWords = [
+      'sodium', 'potassium', 'calcium', 'magnesium',
+      'bis', 'tri', 'di', 'mono',
+      'ethyl', 'butyl', 'propyl', 'methyl', 'iso',
+      'hydroxy', 'hydroxyethyl', 'hydroxypropyl', 'hydroxypropyltrimonium',
+      'beta', 'alpha', 'gamma',
+      'panax', 'centella', 'camellia',
+      'acetylated', 'hydrolyzed', 'hydrogenated',
+      'disodium', 'trisodium', 'malachite'
+    ];
+    
+    const words = tok.toLowerCase().split(' ');
+    
+    // If token is a known prefix word and there's a next token, try merging
+    if (words.length === 1 && firstWords.includes(words[0]) && i + 1 < parts.length) {
+      const next = parts[i + 1].replace(/\s+/g, ' ').trim();
       if (next && !isNoiseToken(next)) {
         const merged = `${tok} ${next}`;
-        // Heuristic: if merged contains known chemical endings or words, accept and skip next
-        if (/(ate|ide|one|ol|ane|ene|acid|glucan|hyaluronate|glycol|glucoside|allantoin|sulfate|citrat|edta)/i.test(merged)) {
+        // Check if merged form looks like valid ingredient name
+        if (/(ate|ide|one|ol|ane|ene|acid|glucan|hyaluronate|glycol|glucoside|allantoin|sulfate|chloride|citrate|edta|extract|oil|water|glycerin|cellulose|carbomer|tromethamine)/i.test(merged)) {
           repaired.push(merged);
-          i++; // skip next
+          i++; // skip next token
           continue;
         }
       }
     }
+    
     repaired.push(tok);
   }
 
-  // Final cleanup: normalize spacing, remove repeated punctuation
-  return repaired.map(r => r.replace(/\s+/g, ' ').replace(/[\.,;]+$/g, '').trim()).filter(Boolean);
+  // Final cleanup: normalize spacing, remove trailing punctuation
+  return repaired
+    .map(r => r.replace(/\s+/g, ' ').replace(/[\.,;\-]+$/g, '').trim())
+    .filter(t => t && !isNoiseToken(t));
 }
 
 export function sortFieldsByPosition(fields) {
@@ -210,7 +250,13 @@ export function extractIngredientsFromText(fullText) {
   tail = tail.replace(/\s?\[[^\]]*\]/g, ' '); // remove bracketed artifacts
   tail = tail.replace(/\b\d{6,}\b/g, ' '); // remove long numbers (lot/ref numbers)
   
-  // Normalize whitespace
+  // Remove Korean text (keep only English ingredients)
+  tail = tail.replace(/[\u3131-\u318E\uAC00-\uD7A3]+/g, ' ');
+  
+  // Clean up concentration parentheses: remove (8,660 ppm), (100 ppb), etc.
+  tail = tail.replace(/\([\d,\.]+\s*(?:ppm|ppb|%|mg|g)\)/gi, '');
+  
+  // Normalize whitespace and line breaks
   tail = tail.replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ');
 
   // collapse repeated separators like '.,' and trim
@@ -224,12 +270,32 @@ function isNoiseToken(tok) {
   if (!tok) return true;
   const t = tok.trim().toLowerCase();
   if (t.length <= 1) return true;
-  if (/^[0-9\s'"\-]+$/.test(t)) return true;
-  // obvious non-ingredient words
-  const noise = ['ewg', 'green', 'safety', 'logo', 'certified', 'distributor', 'manufacturer'];
+  
+  // Filter out pure numbers, punctuation, or Korean characters
+  if (/^[0-9\s'"\-\.]+$/.test(t)) return true;
+  if (/[\u3131-\u318E\uAC00-\uD7A3]/.test(t)) return true; // Korean characters
+  
+  // obvious non-ingredient words and fragments
+  const noise = [
+    'ewg', 'green', 'safety', 'logo', 'certified', 'distributor', 'manufacturer',
+    'ingredients', 'ppm', 'ppb', 'mg', 'ans', 'del', 'ac',
+    'ate', 'lose', 'opyl', 'dium', 'onate', 'onic', // standalone fragments
+    'ppb)', '(ppb', 'ppm)', '(ppm'
+  ];
   if (noise.includes(t)) return true;
-  // tokens like "ct" or "leaf/stem" are sometimes nonstandard -> allow leaf/stem but filter standalone short ones
-  if (t.length < 3 && !/^[a-z]{3,}$/.test(t)) return true;
+  
+  // Filter very short tokens unless they're valid INCI abbreviations
+  const validShort = ['peg', 'ppg', 'ci', 'c12', 'c13', 'c14', 'c15', 'c16', 'edta', 'water', 'oil'];
+  if (t.length < 3 && !validShort.includes(t)) return true;
+  
+  // Filter tokens that are just repeated characters
+  if (/^(.)\1+$/.test(t)) return true;
+  
+  // Filter incomplete fragments (all caps with less than 3 chars)
+  if (t.length < 4 && /^[A-Z]+$/.test(tok.trim())) {
+    return !validShort.includes(t);
+  }
+  
   return false;
 }
 
