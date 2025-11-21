@@ -87,6 +87,40 @@ const OverviewCard = ({ productData, uploadedImages }) => {
           </div>
         </div>
 
+        {/* Suitable Score */}
+        {typeof productData?.suitable === 'number' && (
+          <div>
+            <h5 className="text-sm font-heading font-semibold text-foreground mb-3">
+              Skin Compatibility
+            </h5>
+            <div className="flex items-center space-x-3">
+              <div className="flex-1">
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div
+                    className={`h-2.5 rounded-full transition-all duration-500 ${productData.suitable >= 80
+                        ? 'bg-gradient-to-r from-green-400 to-green-600'
+                        : productData.suitable >= 60
+                          ? 'bg-gradient-to-r from-yellow-400 to-yellow-600'
+                          : 'bg-gradient-to-r from-red-400 to-red-600'
+                      }`}
+                    style={{ width: `${productData.suitable}%` }}
+                  ></div>
+                </div>
+              </div>
+              <span className="text-sm font-medium text-foreground">
+                {Math.round(productData.suitable)}%
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {productData.suitable >= 80
+                ? 'Highly suitable for your skin type'
+                : productData.suitable >= 60
+                  ? 'Moderately suitable for your skin type'
+                  : 'May not be ideal for your skin type'}
+            </p>
+          </div>
+        )}
+
         {/* Key Benefits */}
         <div>
           <h5 className="text-sm font-heading font-semibold text-foreground mb-3">
