@@ -165,7 +165,7 @@ const SkinchateChatbot = () => {
       <div className="min-h-screen bg-gradient-to-br from-accent/20 to-secondary/20">
         <Header />
 
-        <div className="flex h-screen pt-16">
+        <div className="flex h-screen">
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col">
             <ChatHeader
