@@ -10,7 +10,7 @@ import Icon from "../../components/AppIcon";
 import Button from "../../components/ui/Button";
 import AnalysisProgress from "./components/AnalysisProgress";
 
-const API_URL = "http://localhost:5002";
+const API_URL = "http://localhost:5731";
 
 const RoutineRecommendations = () => {
   const [routineType, setRoutineType] = useState("minimal");

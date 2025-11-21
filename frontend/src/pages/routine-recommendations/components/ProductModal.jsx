@@ -1,9 +1,60 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Icon from "../../../components/AppIcon";
 import Image from "../../../components/AppImage";
 import Button from "../../../components/ui/Button";
 
+const getProductImage = async (query) => {
+  try {
+    console.log("Searching for:", query);
+    const apiUrl = "http://localhost:5731";
+    const res = await fetch(
+      `${apiUrl}/api/product-image?q=${encodeURIComponent(query)}`
+    );
+
+    console.log("API response status:", res.status);
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    console.log("API response data:", data);
+
+    if (data.imageUrl) {
+      console.log("Found image:", data.imageUrl);
+      return data.imageUrl;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error fetching product image:", error);
+    return null;
+  }
+};
+
 const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
+  const [productImages, setProductImages] = useState({});
+
+  useEffect(() => {
+    if (!products || products.length === 0) return;
+
+    // Clear previous images when products change
+    setProductImages({});
+
+    products.forEach(async (product) => {
+      // Always try to fetch images, remove the condition
+      const query = `${product.brand} ${product.name} product`;
+      console.log("Fetching image for:", query);
+      const imageUrl = await getProductImage(query);
+      if (imageUrl) {
+        console.log("Got image URL:", imageUrl);
+        setProductImages((prev) => ({
+          ...prev,
+          [product._id || product.id]: imageUrl,
+        }));
+      } else {
+        console.log("No image found for:", query);
+      }
+    });
+  }, [products]);
+
   if (!isOpen) return null;
 
   const formatPrice = (price) => {
@@ -76,8 +127,12 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
                     <div>
                       <div className="aspect-square mb-4 overflow-hidden rounded-lg bg-white/10">
                         <Image
-                          src={product?.image}
-                          alt={product?.imageAlt}
+                          src={
+                            productImages[product?._id || product?.id] ||
+                            product?.image ||
+                            "https://via.placeholder.com/300x300/f0f0f0/666?text=No+Image"
+                          }
+                          alt={product?.imageAlt || product?.name}
                           className="w-full h-full object-cover"
                         />
                       </div>
