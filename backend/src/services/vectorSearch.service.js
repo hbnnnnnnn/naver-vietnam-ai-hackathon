@@ -30,7 +30,7 @@ async function loadVectorCache() {
       ingredient_name: item.ingredient_name,
       cas_no: item.cas_no,
       details: item.details,
-      risk_level: item.risk_level,
+      risk: item.risk || 'Unknown',
       embedding_text: item.embedding_text
     }
   }));
@@ -91,12 +91,11 @@ async function textSearchSafetyData(query, limit = 5) {
       data: {
         id: item.id,
         ingredient_name: item.ingredient_name,
-        cas_no: item.cas_no,
         details: item.details,
-        risk_level: item.risk_level,
+        risk: item.risk || 'Unknown',
         embedding_text: item.embedding_text
       },
-      similarity: 0.5 // Default similarity for text matches
+      similarity: 0.5
     }));
   } catch (error) {
     console.error('Error in text search:', error.message);
