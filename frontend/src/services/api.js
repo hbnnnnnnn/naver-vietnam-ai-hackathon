@@ -66,6 +66,44 @@ class ApiService {
       }
     }
 
+    // Get user skin info from localStorage
+    try {
+      const userProfile = JSON.parse(
+        localStorage.getItem("userProfile") || "{}"
+      );
+
+      const userSkinTypes = [];
+
+      // Add skin type (e.g., "combination")
+      if (userProfile.skinType) {
+        console.log(
+          "🔍 DEBUG Frontend - Adding skinType:",
+          userProfile.skinType
+        );
+        userSkinTypes.push(userProfile.skinType);
+      }
+
+      // Add skin conditions (e.g., ["acne", "oiliness"])
+      if (Array.isArray(userProfile.primaryStatus)) {
+        console.log(
+          "🔍 DEBUG Frontend - Adding primaryStatus:",
+          userProfile.primaryStatus
+        );
+        userSkinTypes.push(...userProfile.primaryStatus);
+      }
+
+      console.log("🔍 DEBUG Frontend - userSkinTypes to send:", userSkinTypes);
+
+      // Send combined skin info to backend as individual form fields
+      if (userSkinTypes.length > 0) {
+        userSkinTypes.forEach((skinType) => {
+          formData.append("userSkin", skinType);
+        });
+      }
+    } catch (error) {
+      console.warn("Failed to load user skin info from localStorage:", error);
+    }
+
     return this.request("/ingredient/upload", {
       method: "POST",
       body: formData,
@@ -135,7 +173,7 @@ class ApiService {
     const { product, ingredients, risk, suitable } = backendResponse.data;
 
     // Transform to match frontend expectations
-    return {
+    const transformed = {
       product: {
         name: product?.name || product?.product_name || "Unknown Product",
         brand: product?.brand || "Unknown Brand",
@@ -147,6 +185,7 @@ class ApiService {
           "Skincare benefits will be analyzed",
           "Product features to be determined",
         ],
+        suitable: suitable, // Move suitable into product object
       },
       risk: {
         categories: risk || {
@@ -156,9 +195,15 @@ class ApiService {
           "high-risk": [],
         },
       },
-      suitable: suitable || {},
       ingredients: this.transformIngredients(ingredients) || [],
     };
+
+    console.log("🔍 DEBUG Transform - final transformed:", transformed);
+    console.log(
+      "🔍 DEBUG Transform - product.suitable:",
+      transformed.product.suitable
+    );
+    return transformed;
   }
 
   transformIngredients(ingredients) {
