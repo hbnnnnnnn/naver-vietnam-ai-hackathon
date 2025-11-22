@@ -4,7 +4,7 @@ import Icon from "../../../components/AppIcon";
 import Image from "../../../components/AppImage";
 import Button from "../../../components/ui/Button";
 
-const ScanHistoryTab = ({ scanHistory }) => {
+const ScanHistoryTab = ({ scanHistory = [], onHistoryChange }) => {
   const navigate = useNavigate();
   const [selectedItems, setSelectedItems] = useState([]);
   const [sortBy, setSortBy] = useState("date");
@@ -24,9 +24,20 @@ const ScanHistoryTab = ({ scanHistory }) => {
   };
 
   const handleDeleteSelected = () => {
-    // Mock delete functionality
-    console.log("Deleting items:", selectedItems);
+    // Filter out selected items and update parent state
+    const updatedHistory = scanHistory.filter(
+      (item) => !selectedItems.includes(item.id)
+    );
+    onHistoryChange?.(updatedHistory);
     setSelectedItems([]);
+    console.log("Deleted items:", selectedItems);
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa tất cả lịch sử quét?")) {
+      onHistoryChange?.([]);
+      setSelectedItems([]);
+    }
   };
 
   const getSafetyColor = (safety) => {
@@ -97,6 +108,19 @@ const ScanHistoryTab = ({ scanHistory }) => {
               iconPosition="left"
             >
               Delete ({selectedItems?.length})
+            </Button>
+          )}
+
+          {scanHistory?.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearAll}
+              iconName="X"
+              iconPosition="left"
+              className="text-red-500 border-red-500 hover:bg-red-50"
+            >
+              Clear All
             </Button>
           )}
         </div>

@@ -24,8 +24,8 @@ const UserProfileDashboard = () => {
   });
 
   const [stats, setStats] = useState({
-    totalScans: 24,
-    savedRoutines: 8,
+    totalScans: 0,
+    savedRoutines: 0,
     aiConsultations: 15,
     activeDays: 45,
   });
@@ -105,71 +105,137 @@ const UserProfileDashboard = () => {
   const [savedRoutines, setSavedRoutines] = useState([
     {
       id: 1,
-      name: "Acne Care Routine",
-      type: "complete",
-      createdDate: "10/25/2024",
-      lastUsed: "11/07/2024",
-      usageCount: 12,
-      morningSteps: [
-        "Gentle cleanser",
-        "pH balancing toner",
-        "Niacinamide serum",
-        "Oil-free moisturizer",
-        "SPF 50 sunscreen",
-      ],
-
-      eveningSteps: [
-        "Oil cleanser",
-        "Deep cleansing face wash",
-        "2% BHA toner",
-        "Retinol serum (3 times/week)",
-        "Restorative moisturizer",
-        "Anti-aging eye cream",
-      ],
+      routineName: "Acne Care Routine",
+      routineType: "complete",
+      createdAt: "2024-10-25T00:00:00Z",
+      skinType: "combination",
+      priceRange: "mid-range",
+      morningRoutine: {
+        steps: [
+          {
+            id: 1,
+            category: "Cleanser",
+            description: "Gentle cleanser",
+            timing: "1 minute",
+          },
+          {
+            id: 2,
+            category: "Treatment",
+            description: "pH balancing toner",
+            timing: "30 seconds",
+          },
+          {
+            id: 3,
+            category: "Treatment",
+            description: "Niacinamide serum",
+            timing: "30 seconds",
+          },
+          {
+            id: 4,
+            category: "Moisturizer",
+            description: "Oil-free moisturizer",
+            timing: "1 minute",
+          },
+          {
+            id: 5,
+            category: "Sunscreen",
+            description: "SPF 50 sunscreen",
+            timing: "1 minute",
+          },
+        ],
+      },
+      eveningRoutine: {
+        steps: [
+          {
+            id: 1,
+            category: "Cleanser",
+            description: "Oil cleanser",
+            timing: "2 minutes",
+          },
+          {
+            id: 2,
+            category: "Cleanser",
+            description: "Deep cleansing face wash",
+            timing: "1 minute",
+          },
+          {
+            id: 3,
+            category: "Treatment",
+            description: "2% BHA toner",
+            timing: "30 seconds",
+          },
+          {
+            id: 4,
+            category: "Treatment",
+            description: "Retinol serum (3x/week)",
+            timing: "30 seconds",
+          },
+          {
+            id: 5,
+            category: "Moisturizer",
+            description: "Restorative moisturizer",
+            timing: "1 minute",
+          },
+          {
+            id: 6,
+            category: "Eye cream",
+            description: "Anti-aging eye cream",
+            timing: "30 seconds",
+          },
+        ],
+      },
     },
     {
       id: 2,
-      name: "Minimal Routine for Sensitive Skin",
-      type: "minimal",
-      createdDate: "10/20/2024",
-      lastUsed: "11/06/2024",
-      usageCount: 8,
-      morningSteps: [
-        "Micellar water",
-        "Light moisturizer",
-        "Mineral sunscreen",
-      ],
-
-      eveningSteps: [
-        "Soap-free cleanser",
-        "Hyaluronic acid serum",
-        "Restorative moisturizer",
-      ],
-    },
-    {
-      id: 3,
-      name: "Anti-Aging Routine",
-      type: "complete",
-      createdDate: "10/15/2024",
-      lastUsed: "11/05/2024",
-      usageCount: 15,
-      morningSteps: [
-        "Enzyme cleanser",
-        "Vitamin C toner",
-        "20% Vitamin C serum",
-        "Peptide eye cream",
-        "Antioxidant moisturizer",
-        "SPF 50+ sunscreen",
-      ],
-
-      eveningSteps: [
-        "Cleansing oil",
-        "Amino acid face wash",
-        "Skin prep toner",
-        "0.5% Retinol serum",
-        "Night cream",
-        "Facial oil",
-      ],
+      routineName: "Minimal Routine for Sensitive Skin",
+      routineType: "minimal",
+      createdAt: "2024-10-20T00:00:00Z",
+      skinType: "sensitive",
+      priceRange: "budget-friendly",
+      morningRoutine: {
+        steps: [
+          {
+            id: 1,
+            category: "Cleanser",
+            description: "Micellar water",
+            timing: "1 minute",
+          },
+          {
+            id: 2,
+            category: "Moisturizer",
+            description: "Light moisturizer",
+            timing: "1 minute",
+          },
+          {
+            id: 3,
+            category: "Sunscreen",
+            description: "Mineral sunscreen",
+            timing: "1 minute",
+          },
+        ],
+      },
+      eveningRoutine: {
+        steps: [
+          {
+            id: 1,
+            category: "Cleanser",
+            description: "Soap-free cleanser",
+            timing: "1 minute",
+          },
+          {
+            id: 2,
+            category: "Treatment",
+            description: "Hyaluronic acid serum",
+            timing: "30 seconds",
+          },
+          {
+            id: 3,
+            category: "Moisturizer",
+            description: "Restorative moisturizer",
+            timing: "1 minute",
+          },
+        ],
+      },
     },
   ]);
 
@@ -193,18 +259,27 @@ const UserProfileDashboard = () => {
     },
   });
 
+  // Update stats when data changes
+  useEffect(() => {
+    setStats((prev) => ({
+      ...prev,
+      totalScans: scanHistory?.length || 0,
+      savedRoutines: savedRoutines?.length || 0,
+    }));
+  }, [scanHistory?.length, savedRoutines?.length]);
+
   const tabs = [
     {
       id: "history",
       label: "Scan History",
       icon: "History",
-      count: scanHistory?.length,
+      count: scanHistory?.length || 0,
     },
     {
       id: "routines",
       label: "Saved Routines",
       icon: "Star",
-      count: savedRoutines?.length,
+      count: savedRoutines?.length || 0,
     },
   ];
 
@@ -267,9 +342,19 @@ const UserProfileDashboard = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case "history":
-        return <ScanHistoryTab scanHistory={scanHistory} />;
+        return (
+          <ScanHistoryTab
+            scanHistory={scanHistory}
+            onHistoryChange={setScanHistory}
+          />
+        );
       case "routines":
-        return <SavedRoutinesTab savedRoutines={savedRoutines} />;
+        return (
+          <SavedRoutinesTab
+            savedRoutines={savedRoutines}
+            onRoutinesChange={setSavedRoutines}
+          />
+        );
       default:
         return <ScanHistoryTab scanHistory={scanHistory} />;
     }
@@ -303,24 +388,24 @@ const UserProfileDashboard = () => {
                   onClick={() => navigate("/product")}
                   iconName="Scan"
                   iconPosition="left"
-                  className="rounded-3xl shadow-glow"
+                  className="rounded-3xl shadow-glow animate-glass-float"
                 >
                   Scan new product
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => navigate("/chatbot")}
+                  onClick={() => navigate("/routine")}
                   iconName="MessageCircle"
                   iconPosition="left"
-                  className="rounded-3xl hover:bg-[rgba(255,144,187,0.2)]"
+                  className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black animate-glass-float"
                 >
-                  AI Consultation
+                  Gợi ý routine
                 </Button>
               </div>
             </div>
 
             {/* Tabs Navigation */}
-            <div className="glass-card mb-6 rounded-3xl">
+            <div className="glass-card mb-6 rounded-2xl">
               <div className="flex items-center border-b border-white/10">
                 {tabs?.map((tab) => (
                   <button
