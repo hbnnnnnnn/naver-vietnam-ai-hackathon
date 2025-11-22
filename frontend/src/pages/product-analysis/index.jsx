@@ -514,7 +514,7 @@ const ProductAnalysis = () => {
               </div>
 
               {/* Analysis Cards */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 gap-8">
                 <div className="space-y-8">
                   <OverviewCard
                     productData={analysisResults?.product}
