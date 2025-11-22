@@ -43,13 +43,14 @@ export const setCachedImage = (query, imageUrl) => {
 
 export const getProductImage = async (query) => {
   try {
-    // Check frontend cache first (L1 - ultra fast)
+    // Check frontend cache first (only for Google images)
     const cachedImage = getCachedImage(query);
-    if (cachedImage) {
+    if (cachedImage && !cachedImage.includes("pexels.com")) {
+      console.log("Frontend cache HIT (Google) for:", query);
       return cachedImage;
     }
 
-    console.log("Frontend cache MISS - fetching from backend:", query);
+    console.log("Fetching image from backend:", query);
     const apiUrl = "http://localhost:5731";
     const res = await fetch(
       `${apiUrl}/api/product-image?q=${encodeURIComponent(query)}`
@@ -63,8 +64,17 @@ export const getProductImage = async (query) => {
 
     if (data.imageUrl) {
       console.log("Found image from backend:", data.imageUrl);
-      // Cache in frontend for next time
-      setCachedImage(query, data.imageUrl);
+      // Only cache Google images, not Pexels
+      if (
+        data.imageUrl.includes("googleapis.com") ||
+        (!data.imageUrl.includes("pexels.com") &&
+          !data.imageUrl.includes("unsplash.com"))
+      ) {
+        console.log("Caching Google image");
+        setCachedImage(query, data.imageUrl);
+      } else {
+        console.log("Not caching Pexels/Unsplash image");
+      }
       return data.imageUrl;
     }
 
@@ -134,5 +144,22 @@ export const cleanupImageCache = () => {
     console.log("Cleaned up", keysToRemove.length, "expired cache entries");
   } catch (error) {
     console.error("Error cleaning up image cache:", error);
+  }
+};
+
+// Clear all product image cache (useful when switching from Pexels to Google)
+export const clearAllImageCache = () => {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(CACHE_KEY_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+    console.log("Cleared all image cache:", keysToRemove.length, "entries");
+  } catch (error) {
+    console.error("Error clearing image cache:", error);
   }
 };
