@@ -161,9 +161,14 @@ export const getProductsByUVIndex = async (req, res) => {
       }
     }
 
-    const products = await Product.find(query).sort({ rank: 1 });
+    let products = await Product.find(query).sort({ rank: 1 });
+
+    // Filter out products with missing name/brand
+    products = products.filter((p) => p.name && p.brand);
+
     res.status(200).json(products);
   } catch (error) {
+    console.error("Error in getProductsByUVIndex:", error);
     res.status(500).json({
       message: "Error retrieving products by UV index",
       error: error.message,

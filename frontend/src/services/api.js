@@ -3,7 +3,7 @@
  */
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5002/api";
+  import.meta.env.VITE_API_URL || "http://localhost:5731/api";
 
 class ApiService {
   constructor() {
@@ -84,8 +84,6 @@ class ApiService {
         userSkinTypes.push(...userProfile.primaryStatus);
       }
 
-      console.log("🔍 DEBUG Frontend - userSkinTypes to send:", userSkinTypes);
-
       // Send combined skin info to backend as individual form fields
       if (userSkinTypes.length > 0) {
         userSkinTypes.forEach((skinType) => {
@@ -121,6 +119,47 @@ class ApiService {
 
   async getProductsBySkinType(skinType) {
     return this.request(`/products/skin-type?skinType=${skinType}`);
+  }
+
+  /**
+   * User APIs
+   */
+  async createOrUpdateUser(userData) {
+    return this.request("/users/profile", {
+      method: "POST",
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async getUserByUsername(username) {
+    return this.request(`/users/username/${encodeURIComponent(username)}`);
+  }
+
+  /**
+   * Routine Management APIs
+   */
+  async saveRoutine(routineData) {
+    return this.request("/users/routines", {
+      method: "POST",
+      body: JSON.stringify(routineData),
+    });
+  }
+
+  async getSavedRoutines(userId) {
+    return this.request(`/users/${userId}/routines`);
+  }
+
+  async deleteSavedRoutine(routineId) {
+    return this.request(`/users/routines/${routineId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async deleteMultipleRoutines(routineIds) {
+    return this.request("/users/routines", {
+      method: "DELETE",
+      body: JSON.stringify({ routineIds }),
+    });
   }
 
   /**
@@ -191,10 +230,6 @@ class ApiService {
     };
 
     console.log("🔍 DEBUG Transform - final transformed:", transformed);
-    console.log(
-      "🔍 DEBUG Transform - product.suitable:",
-      transformed.product.suitable
-    );
     return transformed;
   }
 

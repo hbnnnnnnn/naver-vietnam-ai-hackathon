@@ -4,6 +4,7 @@ import Icon from "../../../components/AppIcon";
 import Button from "../../../components/ui/Button";
 import ProductModal from "../../routine-recommendations/components/ProductModal";
 import { getCachedImage, setCachedImage } from "../../../utils/imageCache";
+import ApiService from "../../../services/api";
 
 const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
   const navigate = useNavigate();
@@ -23,22 +24,45 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
       const userProfile = JSON.parse(
         localStorage.getItem("userProfile") || "{}"
       );
-      const userId =
-        userProfile?.email || userProfile?.username || userProfile?.name;
+      const username = userProfile?.username || userProfile?.name;
 
-      console.log("Fetching routines from localStorage for user:", userId);
+      console.log("Fetching routines from database for user:", username);
 
-      if (!userId) {
-        console.error("No user ID found");
+      if (!username) {
+        console.error("No username found");
         onRoutinesChange?.([]);
         return;
       }
 
-      // Get routines from localStorage instead of API
-      const savedRoutinesData = localStorage.getItem(`savedRoutines_${userId}`);
-      const routines = savedRoutinesData ? JSON.parse(savedRoutinesData) : [];
+      let userId;
+      try {
+        // Try to get user from database
+        const userResponse = await ApiService.getUserByUsername(username);
+        userId = userResponse.user._id;
+        console.log("Found existing user:", userId);
+      } catch (error) {
+        // User doesn't exist, create new user
+        console.log("User not found in database, creating new user...");
+        const userData = {
+          username: username,
+          name: userProfile?.name || username,
+          skinType: userProfile?.skinType || "normal",
+          concerns: userProfile?.skinStatus || userProfile?.concerns || [],
+        };
 
-      console.log("Loaded routines from localStorage:", routines);
+        const createResponse = await ApiService.createOrUpdateUser(userData);
+        userId = createResponse.user._id;
+        console.log("Created new user:", userId);
+      }
+
+      // Get routines from database
+      const routinesResponse = await ApiService.getSavedRoutines(userId);
+      const routines = routinesResponse.routines.map((routine) => ({
+        ...routine,
+        id: routine._id, // Add id field for frontend compatibility
+      }));
+
+      console.log("Loaded routines from database:", routines);
       onRoutinesChange?.(routines);
     } catch (error) {
       console.error("Error fetching saved routines:", error);
@@ -47,7 +71,6 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
       setIsLoading(false);
     }
   };
-
   const handleSelectRoutine = (id) => {
     setSelectedRoutines((prev) =>
       prev?.includes(id) ? prev?.filter((item) => item !== id) : [...prev, id]
@@ -56,36 +79,13 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
 
   const handleDeleteSelected = async () => {
     try {
-      const userProfile = JSON.parse(
-        localStorage.getItem("userProfile") || "{}"
-      );
-      const userId =
-        userProfile?.email || userProfile?.username || userProfile?.name;
+      if (selectedRoutines.length === 0) return;
 
-      if (!userId) {
-        alert("User ID not found");
-        return;
-      }
+      // Delete routines from database using routine IDs directly
+      await ApiService.deleteMultipleRoutines(selectedRoutines);
 
-      // Get current routines from localStorage
-      const savedRoutinesData = localStorage.getItem(`savedRoutines_${userId}`);
-      const currentRoutines = savedRoutinesData
-        ? JSON.parse(savedRoutinesData)
-        : [];
-
-      // Filter out selected routines
-      const updatedRoutines = currentRoutines.filter(
-        (routine) => !selectedRoutines.includes(routine._id || routine.id)
-      );
-
-      // Save back to localStorage
-      localStorage.setItem(
-        `savedRoutines_${userId}`,
-        JSON.stringify(updatedRoutines)
-      );
-
-      // Update parent state
-      onRoutinesChange?.(updatedRoutines);
+      // Refresh routines list
+      await fetchSavedRoutines();
       setSelectedRoutines([]);
       console.log("Successfully deleted routines:", selectedRoutines);
     } catch (error) {

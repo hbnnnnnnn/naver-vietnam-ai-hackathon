@@ -13,7 +13,9 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
     // Load cached images first
     const initialImages = {};
     products.forEach((product) => {
-      const query = `${product.brand} ${product.name} product`;
+      const brand = product.brand || product.product_brand || "Unknown Brand";
+      const name = product.name || product.product_name || "Unknown Product";
+      const query = `${brand} ${name} product`;
       const cachedImage = getCachedImage(query);
       if (cachedImage) {
         initialImages[product._id || product.id] = cachedImage;
@@ -29,21 +31,20 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
 
       // Skip if we already have cached image
       if (initialImages[productId]) {
-        console.log("Using cached image for:", product.brand, product.name);
         return;
       }
 
-      const query = `${product.brand} ${product.name} product`;
-      console.log("Fetching image for:", query);
-      const imageUrl = await getProductImage(query);
-      if (imageUrl) {
-        console.log("Got image URL:", imageUrl);
+      try {
+        const brand = product.brand || product.product_brand || "Unknown Brand";
+        const name = product.name || product.product_name || "Unknown Product";
+        const query = `${brand} ${name} product`;
+        const imageUrl = await getProductImage(query);
         setProductImages((prev) => ({
           ...prev,
           [productId]: imageUrl,
         }));
-      } else {
-        console.log("No image found for:", query);
+      } catch (error) {
+        console.error("Error loading product image:", error);
       }
     });
   }, [products]);

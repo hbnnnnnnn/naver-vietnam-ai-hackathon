@@ -8,6 +8,7 @@ import RegisterStep3 from "./components/RegisterStep3";
 import StepIndicator from "./components/StepIndicator";
 import AuthHeader from "./components/AuthHeader";
 import LoadingStateOverlay from "../../components/ui/LoadingStateOverlay";
+import ApiService from "../../services/api";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -38,55 +39,81 @@ const Login = () => {
     setErrorMessage("");
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Try to get user from database by username
+      const userResponse = await ApiService.getUserByUsername(
+        formData.username
+      );
 
-      const savedProfile = JSON.parse(localStorage.getItem("userProfile"));
+      if (userResponse && userResponse.user) {
+        const user = userResponse.user;
+        // For now, we'll skip password validation since this is a demo
+        // In real app, you'd validate password against hashed version
 
-      // Check if account exists
-      if (!savedProfile || formData?.username !== savedProfile?.username) {
-        // Account doesn't exist
+        // Store user profile in localStorage for session management
+        const userProfile = {
+          email: user.email,
+          username: user.username,
+          name: user.name,
+          skinType: user.skinType,
+          skinStatus: user.concerns || [],
+          primaryStatus: user.concerns || [],
+          joinDate: new Date(user.createdAt).toLocaleDateString("en-US"),
+        };
+
+        localStorage.setItem("userProfile", JSON.stringify(userProfile));
+        localStorage.setItem("isAuthenticated", "true");
+        navigate("/profile");
+      } else {
         setErrorMessage(
           "Account does not exist. Please check your username or register a new account."
         );
-      } else if (formData?.password !== savedProfile?.password) {
-        // Wrong password
-        setErrorMessage("Incorrect password. Please try again.");
-      } else {
-        // Successful login
-        localStorage.setItem("isAuthenticated", "true");
-        navigate("/profile");
       }
     } catch (error) {
-      setErrorMessage(
-        "An error occurred while logging in. Please try again later."
-      );
+      console.error("Login error:", error);
+      setErrorMessage("Account does not exist. Please register a new account.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRegister = () => {
-    const completeUserData = {
-      ...registerData,
-      name: registerData.name,
-      username: registerData.username || registerData.name,
-      skinType: registerData.skinType,
-      skinStatus: registerData.skinStatus,
-      email: registerData.email,
-      primaryStatus: registerData.skinStatus,
-      joinDate: new Date().toLocaleDateString("en-US"),
-    };
-    localStorage.setItem("userProfile", JSON.stringify(completeUserData));
-    localStorage.setItem("isAuthenticated", "true");
-
-    navigate("/profile");
-  };
-
-  const submitRegister = async () => {
+  const handleRegister = async () => {
     setIsLoading(true);
-    await new Promise((res) => setTimeout(res, 1200));
-    localStorage.setItem("isAuthenticated", "true");
-    navigate("/profile");
+    try {
+      const userData = {
+        email: registerData.email,
+        username: registerData.username || registerData.name,
+        name: registerData.name,
+        skinType: registerData.skinType,
+        concerns: registerData.skinStatus,
+      };
+
+      // Create user in database
+      const response = await ApiService.createOrUpdateUser(userData);
+
+      if (response && response.user) {
+        const user = response.user;
+
+        // Store user profile in localStorage for session management
+        const userProfile = {
+          email: user.email,
+          username: user.username,
+          name: user.name,
+          skinType: user.skinType,
+          skinStatus: user.concerns || [],
+          primaryStatus: user.concerns || [],
+          joinDate: new Date(user.createdAt).toLocaleDateString("en-US"),
+        };
+
+        localStorage.setItem("userProfile", JSON.stringify(userProfile));
+        localStorage.setItem("isAuthenticated", "true");
+        navigate("/profile");
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      setErrorMessage("Registration failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const nextStep = () => setStep((s) => s + 1);

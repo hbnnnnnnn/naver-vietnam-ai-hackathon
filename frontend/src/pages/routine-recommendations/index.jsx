@@ -11,6 +11,7 @@ import Icon from "../../components/AppIcon";
 import Button from "../../components/ui/Button";
 import AnalysisProgress from "./components/AnalysisProgress";
 import { preloadRoutineImages } from "../../utils/imageCache";
+import ApiService from "../../services/api";
 
 const API_URL = "http://localhost:5731";
 
@@ -135,8 +136,6 @@ const RoutineRecommendations = () => {
         // Fetch UV index when viewing from profile
         fetchUVIndex();
 
-        console.log("Loaded routine data from profile:", routineData);
-
         // Clear the data from localStorage after loading
         localStorage.removeItem("viewRoutineData");
       } catch (error) {
@@ -180,7 +179,9 @@ const RoutineRecommendations = () => {
         image:
           product.thumbnail_url ||
           "https://images.unsplash.com/photo-1616750819456-5cdee9b85d22",
-        imageAlt: `${product.brand} - ${product.name}`,
+        imageAlt: `${product.brand || "Unknown Brand"} - ${
+          product.name || "Unknown Product"
+        }`,
       }));
 
       setSunscreenProducts(transformedProducts);
@@ -201,24 +202,43 @@ const RoutineRecommendations = () => {
       const userProfile = JSON.parse(
         localStorage.getItem("userProfile") || "{}"
       );
-      const userId =
-        userProfile?.email ||
-        userProfile?.username ||
-        userProfile?.name ||
-        localStorage.getItem("userId");
+      const username = userProfile?.username || userProfile?.name;
       const skinType = userProfile?.skinType?.toLowerCase() || "normal";
 
-      console.log("User profile:", userProfile);
-      console.log("Using userId:", userId);
+      console.log("=== SAVE ROUTINE DEBUG ===");
+      console.log("Full userProfile:", userProfile);
+      console.log("Extracted username:", username);
+      console.log("isAuthenticated:", localStorage.getItem("isAuthenticated"));
 
-      if (!userId) {
-        alert("Please log in to save routines");
+      if (!username) {
+        console.error("No username found in userProfile");
+        alert("Please log in to save routines. Username is missing.");
         return;
       }
 
-      // Save complete routine (both morning and evening) to localStorage
+      let userId;
+      try {
+        // Try to get user from database
+        const userResponse = await ApiService.getUserByUsername(username);
+        userId = userResponse.user._id;
+        console.log("Found existing user:", userId);
+      } catch (error) {
+        // User doesn't exist, create new user
+        console.log("User not found in database, creating new user...");
+        const userData = {
+          username: username,
+          name: userProfile?.name || username,
+          skinType: userProfile?.skinType || "normal",
+          concerns: userProfile?.skinStatus || userProfile?.concerns || [],
+        };
+
+        const createResponse = await ApiService.createOrUpdateUser(userData);
+        userId = createResponse.user._id;
+        console.log("Created new user:", userId);
+      }
+
+      // Save complete routine to database
       const completeRoutineData = {
-        id: Date.now().toString(), // Generate unique ID
         userId,
         routineName,
         routineType,
@@ -230,25 +250,9 @@ const RoutineRecommendations = () => {
         eveningRoutine: {
           steps: nightSteps || [],
         },
-        createdAt: new Date().toISOString(),
       };
 
-      // Get existing routines from localStorage
-      const existingRoutinesData = localStorage.getItem(
-        `savedRoutines_${userId}`
-      );
-      const existingRoutines = existingRoutinesData
-        ? JSON.parse(existingRoutinesData)
-        : [];
-
-      // Add new routine
-      const updatedRoutines = [...existingRoutines, completeRoutineData];
-
-      // Save to localStorage
-      localStorage.setItem(
-        `savedRoutines_${userId}`,
-        JSON.stringify(updatedRoutines)
-      );
+      await ApiService.saveRoutine(completeRoutineData);
 
       // Preload images for this routine in the background
       preloadRoutineImages(completeRoutineData);
@@ -669,9 +673,19 @@ const RoutineRecommendations = () => {
   const transformRoutineSteps = (routine) => {
     if (!routine || !routine.steps) return [];
 
+    console.log("🔄 Transform routine steps - routine:", routine);
+
     return routine.steps.map((step, index) => {
       const products = step.products || [];
       const firstProduct = products[0];
+
+      console.log(`📦 Step ${index + 1} - ${step.name}:`, {
+        step: step,
+        products: products,
+        productsType: typeof products,
+        productsLength: Array.isArray(products) ? products.length : "Not array",
+        firstProduct: firstProduct,
+      });
 
       // Map step names to descriptions as fallback
       const descriptionMap = {
@@ -709,7 +723,9 @@ const RoutineRecommendations = () => {
           image:
             product.thumbnail_url ||
             "https://images.unsplash.com/photo-1735286770188-de4c5131589a",
-          imageAlt: `${product.brand} - ${product.name}`,
+          imageAlt: `${product.brand || "Unknown Brand"} - ${
+            product.name || "Unknown Product"
+          }`,
         };
       });
 
@@ -861,7 +877,7 @@ const RoutineRecommendations = () => {
                         Unable to load routines
                       </h4>
                       <p className="text-sm text-red-700">
-                        Please ensure the backend server is running on port 5002
+                        Please ensure the backend server is running on port 5731
                       </p>
                     </div>
                   </div>
@@ -1026,7 +1042,7 @@ const RoutineRecommendations = () => {
                         iconName="ArrowLeft"
                         iconPosition="left"
                         iconSize={20}
-                        className="rounded-3xl px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                        className="bg-gradient-primary hover:opacity-90 text-white py-3 font-medium shadow-glass-lg animate-glass-float rounded-3xl"
                       >
                         Back to Profile
                       </Button>

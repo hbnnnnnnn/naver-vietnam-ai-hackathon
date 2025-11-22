@@ -1,4 +1,5 @@
-// Product image caching utilities
+// Product image caching utilities - Frontend localStorage cache (L1)
+// Backend will handle database cache (L2) and external API calls (L3)
 const CACHE_KEY_PREFIX = "productImage_";
 const CACHE_EXPIRY_DAYS = 7; // Cache for 7 days
 
@@ -12,12 +13,12 @@ export const getCachedImage = (query) => {
       const expiryTime = CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000; // Convert to milliseconds
 
       if (now - timestamp < expiryTime) {
-        console.log("Cache HIT for:", query);
+        console.log("Frontend cache HIT for:", query);
         return imageUrl;
       } else {
         // Cache expired, remove it
         localStorage.removeItem(cacheKey);
-        console.log("Cache EXPIRED for:", query);
+        console.log("Frontend cache EXPIRED for:", query);
       }
     }
     return null;
@@ -35,7 +36,6 @@ export const setCachedImage = (query, imageUrl) => {
       timestamp: Date.now(),
     };
     localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-    console.log("Cached image for:", query);
   } catch (error) {
     console.error("Error caching image:", error);
   }
@@ -43,27 +43,27 @@ export const setCachedImage = (query, imageUrl) => {
 
 export const getProductImage = async (query) => {
   try {
-    // Check cache first
+    // Check frontend cache first (L1 - ultra fast)
     const cachedImage = getCachedImage(query);
     if (cachedImage) {
       return cachedImage;
     }
 
-    console.log("Cache MISS - fetching from API:", query);
+    console.log("Frontend cache MISS - fetching from backend:", query);
     const apiUrl = "http://localhost:5731";
     const res = await fetch(
       `${apiUrl}/api/product-image?q=${encodeURIComponent(query)}`
     );
 
-    console.log("API response status:", res.status);
+    console.log("Backend API response status:", res.status);
     if (!res.ok) return null;
 
     const data = await res.json();
-    console.log("API response data:", data);
+    console.log("Backend API response data:", data);
 
     if (data.imageUrl) {
-      console.log("Found image:", data.imageUrl);
-      // Cache the result
+      console.log("Found image from backend:", data.imageUrl);
+      // Cache in frontend for next time
       setCachedImage(query, data.imageUrl);
       return data.imageUrl;
     }

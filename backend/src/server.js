@@ -55,20 +55,44 @@ app.use("/api/ingredient", ingredientRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api", imageRoutes);
 
-app.get("/", (req, res) => res.send("Backend alive"));
+app.get("/", (req, res) => {
+  res.json({ message: "Backend alive", timestamp: new Date().toISOString() });
+});
 
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/skincare-app";
 
 // MongoDB connection with SSL options for Node v24 compatibility
-mongoose
-  .connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 30000,
-    socketTimeoutMS: 45000,
-    family: 4, // Use IPv4
-  })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+const connectToMongoDB = async () => {
+  try {
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      family: 4, // Use IPv4
+      maxPoolSize: 10,
+      retryWrites: true,
+      retryReads: true,
+    });
+    console.log("Connected to MongoDB");
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+    console.log("Retrying MongoDB connection in 5 seconds...");
+    setTimeout(connectToMongoDB, 5000);
+  }
+};
+
+connectToMongoDB();
 
 const PORT = process.env.PORT || 5731;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const server = app.listen(PORT, "localhost", () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`API available at: http://localhost:${PORT}/api`);
+});
+
+// Handle server errors
+server.on("error", (err) => {
+  console.error("Server error:", err);
+  if (err.code === "EADDRINUSE") {
+    console.error(`Port ${PORT} is already in use`);
+  }
+});
