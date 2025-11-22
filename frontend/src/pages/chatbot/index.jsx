@@ -35,9 +35,12 @@ const SkinchateChatbot = () => {
     try {
       const response = await ApiService.sendWelcomeMessage(userId);
       if (response && response.bubbles && response.bubbles.length > 0) {
+        // Only get the first text bubble for welcome message
+        const firstTextBubble = response.bubbles.find(bubble => bubble.type === 'text');
+
         const welcomeMessage = {
           id: Date.now(),
-          content: response.bubbles[0]?.data?.description || "Welcome to SkinCare Assistant!",
+          content: firstTextBubble?.data?.description || "Welcome to SkinCare Assistant!",
           timestamp: new Date(),
           isUser: false,
         };
@@ -74,17 +77,19 @@ const SkinchateChatbot = () => {
       const response = await ApiService.sendChatMessage(userId, messageData?.content);
 
       if (response && response.bubbles && response.bubbles.length > 0) {
-        // Process Naver Clova response
-        const botResponses = response.bubbles.map((bubble, index) => ({
-          id: Date.now() + index + 1,
-          content: bubble?.data?.description || bubble?.data?.text || "Sorry, I couldn't understand that.",
-          timestamp: new Date(),
-          isUser: false,
-          // Handle button suggestions if present
-          suggestions: bubble?.data?.buttonList?.map(btn => btn.label) || [],
-        }));
+        // Process Naver Clova response - only take the first text bubble
+        const firstTextBubble = response.bubbles.find(bubble => bubble.type === 'text');
 
-        setMessages((prev) => [...prev, ...botResponses]);
+        if (firstTextBubble) {
+          const botMessage = {
+            id: Date.now() + 1,
+            content: firstTextBubble?.data?.description || "Sorry, I couldn't understand that.",
+            timestamp: new Date(),
+            isUser: false,
+          };
+
+          setMessages((prev) => [...prev, botMessage]);
+        }
       } else {
         // Fallback response
         const fallbackMessage = {
