@@ -1,17 +1,125 @@
 import express from "express";
+import ProductImage from "../models/ProductImage.js";
 
 const router = express.Router();
-// Cache to store search results
-const imageCache = new Map();
+// In-memory cache for ultra-fast access (optional L1 cache)
+const memoryCache = new Map();
+const CACHE_EXPIRY_DAYS = 7;
 
-// Test route
-router.get("/test", (req, res) => {
-  res.json({
-    message: "Image API working!",
-    timestamp: new Date().toISOString(),
-    cacheSize: imageCache.size,
-  });
-});
+// Get cached image from database - ALWAYS prioritize Google when API is available
+const getCachedImageFromDB = async (query) => {
+  try {
+    const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+    const SEARCH_ENGINE_ID = process.env.GOOGLE_CSE_ID;
+    const hasGoogleAPI = !!(GOOGLE_API_KEY && SEARCH_ENGINE_ID);
+
+    // If Google API is available, delete any Pexels cache first
+    if (hasGoogleAPI) {
+      await ProductImage.deleteMany({ query, source: "pexels" });
+    }
+
+    // First try to get Google images (highest priority)
+    const googleCached = await ProductImage.findOne({
+      query,
+      source: "google",
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (googleCached) {
+      console.log("Database cache HIT (Google) for:", query);
+      // Also cache in memory for ultra-fast access
+      memoryCache.set(query, {
+        imageUrl: googleCached.imageUrl,
+        timestamp: googleCached.createdAt,
+        source: "google",
+      });
+      return googleCached.imageUrl;
+    }
+
+    // If no Google cache found but Google API is available, force fresh search
+    if (hasGoogleAPI) {
+      console.log("No Google cache - will fetch from Google API for:", query);
+      return null; // Force fresh Google search
+    }
+
+    // No Google API available, try Pexels fallback
+    const pexelsCached = await ProductImage.findOne({
+      query,
+      source: "pexels",
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (pexelsCached) {
+      console.log("Database cache HIT (Pexels - no Google API) for:", query);
+      memoryCache.set(query, {
+        imageUrl: pexelsCached.imageUrl,
+        timestamp: pexelsCached.createdAt,
+        source: "pexels",
+      });
+      return pexelsCached.imageUrl;
+    }
+
+    console.log("Database cache MISS for:", query);
+    return null;
+  } catch (error) {
+    console.error("Error reading from database cache:", error);
+    return null;
+  }
+};
+
+// Save image to database cache
+const saveCachedImageToDB = async (query, imageUrl, source = "google") => {
+  try {
+    // If we're saving a Google image, remove any existing Pexels cache for this query
+    if (source === "google") {
+      await ProductImage.deleteMany({ query, source: "pexels" });
+      console.log(
+        "Removed Pexels cache for query (replaced with Google):",
+        query
+      );
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + CACHE_EXPIRY_DAYS);
+
+    const productImage = new ProductImage({
+      query,
+      imageUrl,
+      source,
+      expiresAt,
+    });
+
+    await productImage.save();
+
+    // Also cache in memory
+    memoryCache.set(query, {
+      imageUrl,
+      timestamp: new Date(),
+      source,
+    });
+
+    console.log(`Saved to database cache (${source}):`, query);
+  } catch (error) {
+    if (error.code === 11000) {
+      // Duplicate key error
+      // Update existing record if it's from a lower priority source
+      try {
+        const existing = await ProductImage.findOne({ query });
+        if (existing && existing.source !== "google" && source === "google") {
+          // Replace Pexels with Google
+          await ProductImage.deleteOne({ query });
+          await saveCachedImageToDB(query, imageUrl, source);
+        } else {
+          console.log("Image already cached for query:", query);
+        }
+      } catch (updateError) {
+        console.error("Error updating cache:", updateError);
+      }
+    } else {
+      console.error("Error saving to database cache:", error);
+    }
+  }
+};
 
 // Get product image
 router.get("/product-image", async (req, res) => {
@@ -25,17 +133,42 @@ router.get("/product-image", async (req, res) => {
       return res.json({ imageUrl: null });
     }
 
-    // Check cache first
-    if (imageCache.has(q)) {
-      console.log("Cache HIT - returning cached result");
-      return res.json({ imageUrl: imageCache.get(q) });
-    }
-
-    console.log("Cache MISS - searching Google API");
-
     const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
     const SEARCH_ENGINE_ID = process.env.GOOGLE_CSE_ID;
     const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
+
+    console.log(
+      "Google API available:",
+      !!(GOOGLE_API_KEY && SEARCH_ENGINE_ID)
+    );
+
+    // If Google API is available, skip cache and go directly to Google
+    if (GOOGLE_API_KEY && SEARCH_ENGINE_ID) {
+      console.log("Using Google API for fresh search:", q);
+      // Skip all cache checks and go directly to Google search
+    } else {
+      console.log("No Google API - checking cache");
+
+      // Check memory cache first
+      if (memoryCache.has(q)) {
+        const cached = memoryCache.get(q);
+        const expiryTime = CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+        if (Date.now() - new Date(cached.timestamp).getTime() < expiryTime) {
+          console.log("Memory cache HIT for:", q);
+          return res.json({ imageUrl: cached.imageUrl });
+        } else {
+          memoryCache.delete(q);
+        }
+      }
+
+      // Check database cache
+      const cachedImageUrl = await getCachedImageFromDB(q);
+      if (cachedImageUrl) {
+        return res.json({ imageUrl: cachedImageUrl });
+      }
+    }
+
+    console.log("Searching external APIs for:", q);
 
     console.log("API Key exists:", !!GOOGLE_API_KEY);
     console.log("Search Engine ID exists:", !!SEARCH_ENGINE_ID);
@@ -116,6 +249,7 @@ router.get("/product-image", async (req, res) => {
         if (data.photos && data.photos.length > 0) {
           imageUrl = data.photos[0].src.medium;
           console.log("SUCCESS with Pexels:", imageUrl);
+          // Don't save Pexels to cache - let it be fetched fresh each time
         } else {
           console.log("No results from Pexels either");
         }
@@ -126,14 +260,18 @@ router.get("/product-image", async (req, res) => {
 
     if (!imageUrl) {
       console.log("All APIs failed - no image found");
+    } else {
+      // Only save Google images to cache, don't cache Pexels
+      if (GOOGLE_API_KEY && SEARCH_ENGINE_ID) {
+        console.log("Saving Google image to cache");
+        await saveCachedImageToDB(q, imageUrl, "google");
+      } else {
+        console.log("Pexels image found but not caching (to avoid conflicts)");
+      }
     }
 
-    // Cache the result
-    imageCache.set(q, imageUrl);
-    console.log("Cached result for query:", q);
-
-    console.log("Extracted image URL:", imageUrl);
-    console.log("Cache size:", imageCache.size);
+    console.log("Final image URL:", imageUrl);
+    console.log("Memory cache size:", memoryCache.size);
     console.log("=== END IMAGE SEARCH ===");
 
     res.json({ imageUrl });
@@ -143,16 +281,21 @@ router.get("/product-image", async (req, res) => {
   }
 });
 
-// Test route
-router.get("/test", (req, res) => {
-  res.json({
-    message: "Image API is working",
-    timestamp: new Date().toISOString(),
-    env: {
-      hasGoogleKey: !!process.env.GOOGLE_API_KEY,
-      hasSearchEngine: !!process.env.GOOGLE_CSE_ID,
-    },
-  });
+// Clear Pexels cache endpoint (for debugging/migration)
+router.delete("/clear-pexels-cache", async (req, res) => {
+  try {
+    const result = await ProductImage.deleteMany({ source: "pexels" });
+    memoryCache.clear(); // Also clear memory cache
+    console.log(`Cleared ${result.deletedCount} Pexels images from database`);
+    res.json({
+      success: true,
+      deletedCount: result.deletedCount,
+      message: "Pexels cache cleared successfully",
+    });
+  } catch (error) {
+    console.error("Error clearing Pexels cache:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 export default router;
@@ -194,6 +337,8 @@ async function searchPexels(query, res) {
       if (data.photos && data.photos.length > 0) {
         imageUrl = data.photos[0].src.medium;
         console.log("Found Pexels image:", imageUrl);
+        // Save to database cache
+        await saveCachedImageToDB(query, imageUrl, "pexels");
         break;
       }
     }

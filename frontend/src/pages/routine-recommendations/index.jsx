@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
+import { useNavigate } from "react-router-dom";
 import Header from "../../components/ui/Header";
 import FilterControls from "./components/FilterControls";
 import RoutineCard from "./components/RoutineCard";
@@ -9,10 +10,13 @@ import Sunscreen from "./components/Sunscreen";
 import Icon from "../../components/AppIcon";
 import Button from "../../components/ui/Button";
 import AnalysisProgress from "./components/AnalysisProgress";
+import { preloadRoutineImages } from "../../utils/imageCache";
+import ApiService from "../../services/api";
 
 const API_URL = "http://localhost:5731";
 
 const RoutineRecommendations = () => {
+  const navigate = useNavigate();
   const [routineType, setRoutineType] = useState("minimal");
   const [priceRange, setPriceRange] = useState("budget-friendly");
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +35,13 @@ const RoutineRecommendations = () => {
   const [uvLevel, setUvLevel] = useState("");
   const [isLoadingUV, setIsLoadingUV] = useState(false);
   const [sunscreenProducts, setSunscreenProducts] = useState([]);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [routineName, setRoutineName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // State for viewing saved routine from profile
+  const [isViewingFromProfile, setIsViewingFromProfile] = useState(false);
+  const [savedRoutineData, setSavedRoutineData] = useState(null);
 
   // Fetch UV Index based on user location
   const fetchUVIndex = async () => {
@@ -100,6 +111,49 @@ const RoutineRecommendations = () => {
     }
   }, [showResults]);
 
+  // Check for saved routine data from profile on component mount
+  useEffect(() => {
+    const viewRoutineData = localStorage.getItem("viewRoutineData");
+    if (viewRoutineData) {
+      try {
+        const routineData = JSON.parse(viewRoutineData);
+        setSavedRoutineData(routineData);
+        setIsViewingFromProfile(true);
+        setShowResults(true);
+
+        // Set routine type and price range from saved data
+        setRoutineType(routineData.routineType || "minimal");
+        setPriceRange(routineData.priceRange || "budget-friendly");
+
+        // Set routines data
+        if (routineData.morningRoutine) {
+          setMorningRoutine(routineData.morningRoutine);
+        }
+        if (routineData.eveningRoutine) {
+          setNightRoutine(routineData.eveningRoutine);
+        }
+
+        // Fetch UV index when viewing from profile
+        fetchUVIndex();
+
+        // Clear the data from localStorage after loading
+        localStorage.removeItem("viewRoutineData");
+      } catch (error) {
+        console.error("Error parsing routine data:", error);
+        localStorage.removeItem("viewRoutineData");
+      }
+    }
+  }, []);
+
+  const handleBackToProfile = () => {
+    setIsViewingFromProfile(false);
+    setSavedRoutineData(null);
+    setShowResults(false);
+    setMorningRoutine(null);
+    setNightRoutine(null);
+    navigate("/profile");
+  };
+
   // Fetch sunscreen products from backend using UV index and skin type
   const fetchSunscreenProducts = async (uvIndex, skinType) => {
     try {
@@ -125,7 +179,9 @@ const RoutineRecommendations = () => {
         image:
           product.thumbnail_url ||
           "https://images.unsplash.com/photo-1616750819456-5cdee9b85d22",
-        imageAlt: `${product.brand} - ${product.name}`,
+        imageAlt: `${product.brand || "Unknown Brand"} - ${
+          product.name || "Unknown Product"
+        }`,
       }));
 
       setSunscreenProducts(transformedProducts);
@@ -134,8 +190,87 @@ const RoutineRecommendations = () => {
     }
   };
 
+  // Save both morning and evening routines
+  const handleSaveAllRoutines = async () => {
+    if (!routineName.trim()) {
+      alert("Please enter a routine name");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const userProfile = JSON.parse(
+        localStorage.getItem("userProfile") || "{}"
+      );
+      const username = userProfile?.username || userProfile?.name;
+      const skinType = userProfile?.skinType?.toLowerCase() || "normal";
+
+      if (!username) {
+        console.error("No username found in userProfile");
+        alert("Please log in to save routines. Username is missing.");
+        return;
+      }
+
+      let userId;
+      try {
+        // Try to get user from database
+        const userResponse = await ApiService.getUserByUsername(username);
+        userId = userResponse.user._id;
+      } catch (error) {
+        // User doesn't exist, create new user
+        const userData = {
+          username: username,
+          name: userProfile?.name || username,
+          skinType: userProfile?.skinType || "normal",
+          concerns: userProfile?.skinStatus || userProfile?.concerns || [],
+        };
+
+        const createResponse = await ApiService.createOrUpdateUser(userData);
+        userId = createResponse.user._id;
+      }
+
+      // Save complete routine to database
+      const completeRoutineData = {
+        userId,
+        routineName,
+        routineType,
+        skinType,
+        priceRange,
+        uvIndex: uvIndex || null,
+        location: "Ho Chi Minh City",
+        morningRoutine: {
+          steps: morningSteps || [],
+        },
+        eveningRoutine: {
+          steps: nightSteps || [],
+        },
+      };
+
+      await ApiService.saveRoutine(completeRoutineData);
+
+      // Preload images for this routine in the background
+      preloadRoutineImages(completeRoutineData);
+
+      alert("Complete routine saved successfully!");
+      setIsSaveModalOpen(false);
+      setRoutineName("");
+    } catch (error) {
+      console.error("Error saving routines:", error);
+      alert("Failed to save routines. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Fetch routines from backend API
   const fetchRoutines = async () => {
+    // Check authentication before fetching
+    const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
     setIsLoading(true);
     setApiError(null);
 
@@ -479,6 +614,16 @@ const RoutineRecommendations = () => {
 
   // Handle analysis start with progress
   const handleAnalysisStart = () => {
+    // Check authentication first
+    const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+    const userProfile = localStorage.getItem("userProfile");
+
+    if (!isAuthenticated || !userProfile) {
+      // Redirect to login if not authenticated
+      navigate("/login");
+      return;
+    }
+
     setIsAnalyzing(true);
     setAnalysisProgress(0);
     setShowResults(false);
@@ -579,7 +724,9 @@ const RoutineRecommendations = () => {
           image:
             product.thumbnail_url ||
             "https://images.unsplash.com/photo-1735286770188-de4c5131589a",
-          imageAlt: `${product.brand} - ${product.name}`,
+          imageAlt: `${product.brand || "Unknown Brand"} - ${
+            product.name || "Unknown Product"
+          }`,
         };
       });
 
@@ -615,6 +762,22 @@ const RoutineRecommendations = () => {
         <Header />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Back to Profile Button */}
+          {isViewingFromProfile && (
+            <div className="mb-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBackToProfile}
+                iconName="ArrowLeft"
+                iconPosition="left"
+                className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] shadow-glass-lg"
+              >
+                Back to Profile
+              </Button>
+            </div>
+          )}
+
           {/* Page Header */}
           <div className="text-center mb-12">
             <div className="flex items-center justify-center space-x-3 mb-4">
@@ -622,47 +785,60 @@ const RoutineRecommendations = () => {
                 <Icon name="Calendar" size={24} color="white" />
               </div>
               <h1 className="text-3xl font-heading font-bold gradient-text">
-                Skincare Routine Recommendations
+                {isViewingFromProfile
+                  ? `Details: ${
+                      savedRoutineData?.routineName ||
+                      savedRoutineData?.name ||
+                      "Skincare Routine"
+                    }`
+                  : "Skincare Routine Recommendations"}
               </h1>
             </div>
             <p className="text-lg text-muted-foreground font-caption max-w-2xl mx-auto">
-              Get personalized skincare routine recommendations based on your
-              lifestyle and budget. From minimal to comprehensive routines, we
-              help you build the perfect routine.
+              {isViewingFromProfile
+                ? "View details of your saved routine. Click on steps to see product suggestions."
+                : "Get personalized skincare routine recommendations based on your lifestyle and budget. From minimal to comprehensive routines, we help you build the perfect routine."}
             </p>
           </div>
 
           {/* Filter Controls */}
-          <div className="mt-14">
-            <FilterControls
-              routineType={routineType}
-              setRoutineType={setRoutineType}
-              priceRange={priceRange}
-              setPriceRange={setPriceRange}
-            />
-          </div>
+          {!isViewingFromProfile && (
+            <div className="mt-14">
+              <FilterControls
+                routineType={routineType}
+                setRoutineType={setRoutineType}
+                priceRange={priceRange}
+                setPriceRange={setPriceRange}
+              />
+            </div>
+          )}
+
           {/* CTA Button */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-            <Button
-              variant="default"
-              size="lg"
-              onClick={handleAnalysisStart}
-              disabled={isAnalyzing}
-              className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-6"
-              iconName="Camera"
-              iconPosition="left"
-              iconSize={20}
-            >
-              {isAnalyzing ? "Analyzing..." : "Get Routine Suggestions"}
-            </Button>
-          </div>
+          {!isViewingFromProfile && (
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+              <Button
+                variant="default"
+                size="lg"
+                onClick={handleAnalysisStart}
+                disabled={isAnalyzing}
+                className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-6"
+                iconName="Camera"
+                iconPosition="left"
+                iconSize={20}
+              >
+                {isAnalyzing ? "Analyzing..." : "Get Routine Suggestions"}
+              </Button>
+            </div>
+          )}
 
           {/* Analysis Progress */}
-          <AnalysisProgress
-            isAnalyzing={isAnalyzing}
-            progress={analysisProgress}
-            currentStep={currentStep}
-          />
+          {!isViewingFromProfile && (
+            <AnalysisProgress
+              isAnalyzing={isAnalyzing}
+              progress={analysisProgress}
+              currentStep={currentStep}
+            />
+          )}
 
           {/* Results Section */}
           {showResults && (
@@ -702,7 +878,7 @@ const RoutineRecommendations = () => {
                         Unable to load routines
                       </h4>
                       <p className="text-sm text-red-700">
-                        Please ensure the backend server is running on port 5002
+                        Please ensure the backend server is running on port 5731
                       </p>
                     </div>
                   </div>
@@ -710,7 +886,7 @@ const RoutineRecommendations = () => {
               )}
 
               {/* Routine Cards */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <RoutineCard
                   title="Morning Routine"
                   timeOfDay="morning"
@@ -727,6 +903,62 @@ const RoutineRecommendations = () => {
                   isLoading={isLoading}
                 />
               </div>
+
+              {/* Save All Routines Button */}
+              {!isViewingFromProfile &&
+                (morningSteps?.length > 0 || nightSteps?.length > 0) && (
+                  <div className="flex justify-center mb-12">
+                    <button
+                      onClick={() => setIsSaveModalOpen(true)}
+                      className="bg-gradient-primary text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2 hover:scale-105"
+                    >
+                      <Icon name="Heart" size={20} />
+                      <span>Save Complete Routine</span>
+                    </button>
+                  </div>
+                )}
+
+              {/* Save Modal */}
+              {isSaveModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+                    <h3 className="text-xl font-heading font-semibold text-foreground mb-4">
+                      Save Your Routine
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      Enter a name for your complete skincare routine (both
+                      morning and evening will be saved).
+                    </p>
+                    <input
+                      type="text"
+                      value={routineName}
+                      onChange={(e) => setRoutineName(e.target.value)}
+                      placeholder="Enter routine name..."
+                      className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={isSaving}
+                    />
+                    <div className="flex space-x-3">
+                      <Button
+                        onClick={() => {
+                          setIsSaveModalOpen(false);
+                          setRoutineName("");
+                        }}
+                        className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                        disabled={isSaving}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSaveAllRoutines}
+                        className="flex-1 bg-gradient-primary text-white py-2 rounded-lg hover:shadow-lg transition-all duration-300"
+                        disabled={isSaving || !routineName.trim()}
+                      >
+                        {isSaving ? "Saving..." : "Save Routine"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Tips Section */}
               <div className="rounded-3xl glass-card p-6 mb-8">
@@ -804,6 +1036,18 @@ const RoutineRecommendations = () => {
                     questions and help you optimize your routine.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    {isViewingFromProfile && (
+                      <Button
+                        variant="outline"
+                        onClick={handleBackToProfile}
+                        iconName="ArrowLeft"
+                        iconPosition="left"
+                        iconSize={20}
+                        className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black"
+                      >
+                        Back to Profile
+                      </Button>
+                    )}
                     <Button
                       variant="default"
                       onClick={() =>
@@ -817,8 +1061,8 @@ const RoutineRecommendations = () => {
                       Consult with AI
                     </Button>
                     <Button
-                      variant="outline"
-                      className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black"
+                      variant="default"
+                      className="rounded-3xl px-6 py-3"
                       iconName="Camera"
                       iconPosition="left"
                       iconSize={16}

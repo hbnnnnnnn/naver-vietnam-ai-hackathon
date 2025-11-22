@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import Icon from "../../../components/AppIcon";
 import Image from "../../../components/AppImage";
 import Button from "../../../components/ui/Button";
+import ScanHistoryService from "../../../services/scanHistory";
 
-const ScanHistoryTab = ({ scanHistory }) => {
+const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
   const navigate = useNavigate();
   const [selectedItems, setSelectedItems] = useState([]);
   const [sortBy, setSortBy] = useState("date");
@@ -24,17 +25,34 @@ const ScanHistoryTab = ({ scanHistory }) => {
   };
 
   const handleDeleteSelected = () => {
-    // Mock delete functionality
-    console.log("Deleting items:", selectedItems);
+    if (selectedItems.length === 0) return;
+
+    const success = ScanHistoryService.deleteMultipleScans(selectedItems);
+    if (success && onHistoryUpdate) {
+      onHistoryUpdate(); // Refresh the history in parent component
+    }
     setSelectedItems([]);
+    console.log("Deleted items:", selectedItems);
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa tất cả lịch sử quét?")) {
+      const success = ScanHistoryService.clearAllScans();
+      if (success && onHistoryUpdate) {
+        onHistoryUpdate(); // Refresh the history in parent component
+      }
+      setSelectedItems([]);
+    }
   };
 
   const getSafetyColor = (safety) => {
     switch (safety) {
       case "safe":
         return "text-success";
+      case "moderate":
       case "neutral":
         return "text-warning";
+      case "caution":
       case "risky":
         return "text-destructive";
       default:
@@ -46,8 +64,10 @@ const ScanHistoryTab = ({ scanHistory }) => {
     switch (safety) {
       case "safe":
         return "bg-success/10";
+      case "moderate":
       case "neutral":
         return "bg-warning/10";
+      case "caution":
       case "risky":
         return "bg-destructive/10";
       default:
@@ -70,7 +90,7 @@ const ScanHistoryTab = ({ scanHistory }) => {
   return (
     <div className="rounded-3xl space-y-4">
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -87,18 +107,6 @@ const ScanHistoryTab = ({ scanHistory }) => {
               ? "Deselect all"
               : "Select all"}
           </Button>
-
-          {selectedItems?.length > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDeleteSelected}
-              iconName="Trash2"
-              iconPosition="left"
-            >
-              Delete ({selectedItems?.length})
-            </Button>
-          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -108,14 +116,33 @@ const ScanHistoryTab = ({ scanHistory }) => {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e?.target?.value)}
-            className="bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-sm font-caption focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="bg-background border border-border rounded px-2 py-1 text-sm font-caption focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            <option value="date">Scan date</option>
-            <option value="name">Product name</option>
-            <option value="safety">Safety level</option>
+            <option value="date">Date</option>
+            <option value="safety">Safety Level</option>
+            <option value="name">Product Name</option>
           </select>
         </div>
       </div>
+
+      {/* Delete Controls */}
+      {selectedItems?.length > 0 && (
+        <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg mb-4">
+          <span className="text-sm font-caption text-foreground">
+            Selected {selectedItems?.length} scan{selectedItems?.length > 1 ? "s" : ""}
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDeleteSelected}
+            iconName="Trash2"
+            iconPosition="left"
+          >
+            Delete
+          </Button>
+        </div>
+      )}
+
       {/* History List */}
       <div className="space-y-3">
         {sortedHistory?.length === 0 ? (
@@ -131,7 +158,7 @@ const ScanHistoryTab = ({ scanHistory }) => {
             </p>
             <Button
               variant="default"
-              onClick={() => navigate("/product-upload-scanner")}
+              onClick={() => navigate("/product")}
               iconName="Plus"
               iconPosition="left"
             >
@@ -142,11 +169,10 @@ const ScanHistoryTab = ({ scanHistory }) => {
           sortedHistory?.map((item) => (
             <div
               key={item?.id}
-              className={`rounded-2xl glass-card p-4 transition-smooth hover:shadow-glow ${
-                selectedItems?.includes(item?.id)
-                  ? "ring-2 ring-primary/50"
-                  : ""
-              }`}
+              className={`rounded-2xl glass-card p-4 transition-smooth hover:shadow-glow ${selectedItems?.includes(item?.id)
+                ? "ring-2 ring-primary/50"
+                : ""
+                }`}
             >
               <div className="flex items-start gap-4">
                 {/* Checkbox */}
@@ -196,8 +222,8 @@ const ScanHistoryTab = ({ scanHistory }) => {
                       )} ${getSafetyColor(item?.safetyLevel)}`}
                     >
                       {item?.safetyLevel === "safe" && "Safe"}
-                      {item?.safetyLevel === "neutral" && "Neutral"}
-                      {item?.safetyLevel === "risky" && "Risky"}
+                      {(item?.safetyLevel === "moderate" || item?.safetyLevel === "neutral") && "Moderate"}
+                      {(item?.safetyLevel === "caution" || item?.safetyLevel === "risky") && "Caution"}
                     </div>
                   </div>
 
@@ -215,15 +241,20 @@ const ScanHistoryTab = ({ scanHistory }) => {
 
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="ghost"
                         size="sm"
                         onClick={() =>
-                          navigate("/product-analysis-results", {
-                            state: { productData: item },
+                          navigate("/product", {
+                            state: {
+                              analysisResults: item?.fullAnalysis,
+                              uploadedImages: item?.uploadedImages,
+                              showResults: true,
+                              fromHistory: true
+                            },
                           })
                         }
                         iconName="Eye"
                         iconPosition="left"
+                        className="bg-ring rounded-3xl"
                       >
                         View details
                       </Button>
@@ -235,7 +266,7 @@ const ScanHistoryTab = ({ scanHistory }) => {
           ))
         )}
       </div>
-    </div>
+    </div >
   );
 };
 

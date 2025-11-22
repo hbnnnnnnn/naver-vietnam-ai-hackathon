@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Header from "../../components/ui/Header";
 import ImageUploadZone from "./components/ImageUploadZone";
 import OverviewCard from "./components/OverviewCard";
@@ -8,9 +9,12 @@ import AnalysisProgress from "./components/AnalysisProgress";
 import Icon from "../../components/AppIcon";
 import Button from "../../components/ui/Button";
 import ApiService from "../../services/api";
+import ScanHistoryService from "../../services/scanHistory";
 import config from "../../config";
 
 const ProductAnalysis = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [uploadedImages, setUploadedImages] = useState({
     front: null,
     back: null,
@@ -26,6 +30,19 @@ const ProductAnalysis = () => {
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState(null);
   const [useRealAPI, setUseRealAPI] = useState(config.features.useRealAPI);
+
+  // Load analysis results from navigation state (from scan history)
+  useEffect(() => {
+    if (location.state?.analysisResults && location.state?.showResults) {
+      setAnalysisResults(location.state.analysisResults);
+      setShowResults(true);
+
+      // If coming from history, use the real uploaded images
+      if (location.state.fromHistory && location.state.uploadedImages) {
+        setUploadedImages(location.state.uploadedImages);
+      }
+    }
+  }, [location.state]);
 
   // Mock analysis data
   const mockAnalysisData = {
@@ -48,37 +65,31 @@ const ProductAnalysis = () => {
         "no-risk": [
           {
             name: "Vitamin C (L-Ascorbic Acid)",
-            concentration: "15%",
             reason: "Safe ingredient, FDA approved for cosmetic use",
           },
           {
             name: "Hyaluronic Acid",
-            concentration: "2%",
             reason: "Natural moisturizer, non-irritating",
           },
           {
             name: "Glycerin",
-            concentration: "5%",
             reason: "Safe skin softener, suitable for all skin types",
           },
         ],
         "low-risk": [
           {
             name: "Phenoxyethanol",
-            concentration: "0.5%",
             reason:
               "Preservative that may cause mild irritation in sensitive skin",
           },
           {
             name: "Fragrance",
-            concentration: "0.2%",
             reason: "May cause allergic reactions in some individuals",
           },
         ],
         "moderate-risk": [
           {
             name: "Alpha Hydroxy Acids (AHA)",
-            concentration: "3%",
             reason: "May increase sun sensitivity, sunscreen required",
           },
         ],
@@ -87,89 +98,82 @@ const ProductAnalysis = () => {
     ingredients: [
       {
         name: "Vitamin C (L-Ascorbic Acid)",
-        concentration: "15",
-        description:
-          "Powerful antioxidant that brightens skin and stimulates collagen production",
+        description: "A potent antioxidant that brightens skin and protects against free radical damage.",
         benefits: [
-          "Natural skin brightening",
-          "Powerful antioxidant protection",
-          "Stimulates collagen production",
-          "Reduces dark spots and freckles",
+          "Brightens skin tone",
+          "Reduces dark spots",
+          "Provides antioxidant protection",
+          "Supports collagen synthesis"
         ],
-        usageNotes: "Best used in the morning with sunscreen",
-        safetyInfo: null,
+        good_for: ["dry", "combination", "oily"],
+        risk_level: "moderate-risk",
+        reason: "Can cause irritation at high concentrations or in sensitive skin; stability depends on formulation."
       },
       {
         name: "Hyaluronic Acid",
-        concentration: "2",
-        description:
-          "Natural moisturizer that can hold up to 1000 times its weight in water",
+        description: "A powerful humectant that attracts and retains moisture in the skin.",
         benefits: [
           "Deep hydration",
           "Plumps fine lines",
           "Improves skin elasticity",
-          "Restores skin barrier",
+          "Supports skin barrier"
         ],
-        usageNotes:
-          "Can be used morning and evening, suitable for all skin types",
-        safetyInfo: null,
+        good_for: ["dry", "combination", "oily", "sensitive"],
+        risk_level: "low-risk",
+        reason: "Widely considered safe and non-irritating for all skin types."
       },
       {
         name: "Niacinamide (Vitamin B3)",
-        concentration: "5",
-        description:
-          "Vitamin B3 that helps control excess oil and minimize pores",
+        description: "A versatile ingredient that strengthens the skin barrier and improves uneven skin tone.",
         benefits: [
-          "Controls excess oil",
-          "Minimizes pore appearance",
-          "Evens skin tone",
-          "Mild anti-inflammatory",
+          "Regulates oil production",
+          "Reduces redness",
+          "Improves uneven skin tone",
+          "Strengthens skin barrier",
+          "Minimizes pore appearance"
         ],
-        usageNotes: "Safe for daily use, compatible with other ingredients",
-        safetyInfo: null,
+        good_for: ["dry", "combination", "oily", "sensitive"],
+        risk_level: "low-risk",
+        reason: "Generally well tolerated; suitable for most skin types at standard concentrations."
       },
       {
         name: "Alpha Hydroxy Acids (AHA)",
-        concentration: "3",
-        description:
-          "Natural acids that gently exfoliate and smooth skin texture",
+        description: "A group of water-soluble acids that exfoliate the skin surface to improve texture and radiance.",
         benefits: [
-          "Gentle exfoliation",
-          "Smooths skin texture",
+          "Exfoliates dead skin cells",
           "Improves skin texture",
-          "Enhances product absorption",
+          "Brightens skin",
+          "Enhances product absorption"
         ],
-        usageNotes: "Start with low frequency, gradually increase over time",
-        safetyInfo:
-          "May increase sun sensitivity. Always use sunscreen when using AHA products.",
+        good_for: ["dry", "dull", "uneven_texture"],
+        risk_level: "moderate-risk",
+        reason: "May cause irritation or sensitivity, especially in higher concentrations or sensitive skin."
       },
       {
         name: "Phenoxyethanol",
-        concentration: "0.5",
-        description: "Preservative that prevents bacteria and mold growth",
+        description: "A broad-spectrum preservative used to protect products from bacteria and mold.",
         benefits: [
-          "Product preservation",
-          "Prevents bacterial growth",
-          "Extends shelf life",
+          "Prevents microbial growth",
+          "Maintains product safety",
+          "Extends shelf life"
         ],
-        usageNotes: "Low concentration, safe for most people",
-        safetyInfo:
-          "May cause mild irritation in very sensitive skin. Patch test recommended.",
+        good_for: ["all"],
+        risk_level: "moderate-risk",
+        reason: "Safe at <1% concentration; may cause irritation in very sensitive individuals."
       },
       {
         name: "Glycerin",
-        concentration: "5",
-        description:
-          "Natural skin conditioner that moisturizes and softens skin",
+        description: "A classic humectant that draws moisture into the skin and keeps it hydrated.",
         benefits: [
-          "Natural moisturizing",
-          "Softens skin",
-          "Improves smoothness",
-          "Non-comedogenic",
+          "Hydrates skin",
+          "Softens and smooths",
+          "Supports skin barrier",
+          "Non-comedogenic"
         ],
-        usageNotes: "Suitable for all skin types, can be used daily",
-        safetyInfo: null,
-      },
+        good_for: ["dry", "combination", "oily", "sensitive"],
+        risk_level: "low-risk",
+        reason: "One of the safest and most widely tolerated skincare ingredients."
+      }
     ],
   };
 
@@ -231,6 +235,9 @@ const ProductAnalysis = () => {
       setIsAnalyzing(false);
       setAnalysisResults(transformedResults);
       setShowResults(true);
+
+      // Save scan result to history
+      ScanHistoryService.saveScanResult(transformedResults, uploadedImages);
     } catch (error) {
       console.error("API Analysis failed:", error);
       setError(error.message);
@@ -272,6 +279,9 @@ const ProductAnalysis = () => {
     setIsAnalyzing(false);
     setAnalysisResults(mockAnalysisData);
     setShowResults(true);
+
+    // Save scan result to history
+    ScanHistoryService.saveScanResult(mockAnalysisData, uploadedImages);
   };
 
   const handleAnalyzeProduct = () => {
@@ -374,8 +384,8 @@ const ProductAnalysis = () => {
             </div>
 
             {/* API Toggle & Error Display */}
-            <div className="flex flex-col items-center space-y-4 mb-8">
-              {/* API Mode Toggle */}
+
+            {/* <div className="flex flex-col items-center space-y-4 mb-8">
               <div className="glass-card p-4 rounded-xl">
                 <div className="flex items-center space-x-3">
                   <span className="text-sm text-muted-foreground font-caption">
@@ -383,11 +393,10 @@ const ProductAnalysis = () => {
                   </span>
                   <button
                     onClick={() => setUseRealAPI(!useRealAPI)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                      useRealAPI
-                        ? "bg-primary text-white"
-                        : "bg-muted text-muted-foreground"
-                    }`}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${useRealAPI
+                      ? "bg-primary text-white"
+                      : "bg-muted text-muted-foreground"
+                      }`}
                   >
                     {useRealAPI ? "Real API" : "Demo Mode"}
                   </button>
@@ -399,7 +408,6 @@ const ProductAnalysis = () => {
                 </div>
               </div>
 
-              {/* Error Message */}
               {error && (
                 <div className="glass-card p-4 rounded-xl border border-error/20 bg-error/5 max-w-md">
                   <div className="flex items-center space-x-2">
@@ -414,7 +422,8 @@ const ProductAnalysis = () => {
                   </p>
                 </div>
               )}
-            </div>
+            </div> */}
+
 
             {/* Instructions */}
             <div className="glass-card rounded-xl p-6 max-w-5xl mx-auto">
@@ -505,7 +514,7 @@ const ProductAnalysis = () => {
               </div>
 
               {/* Analysis Cards */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 gap-8">
                 <div className="space-y-8">
                   <OverviewCard
                     productData={analysisResults?.product}
@@ -522,6 +531,19 @@ const ProductAnalysis = () => {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                {location.state?.fromHistory && (
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => navigate("/profile")}
+                    iconName="ArrowLeft"
+                    iconPosition="left"
+                    className="w-full sm:w-auto rounded-3xl border border-foreground hover:bg-[rgba(255,144,187,0.2)]"
+                  >
+                    Back to Profile
+                  </Button>
+                )}
+
                 <Button
                   variant="default"
                   size="lg"

@@ -7,171 +7,105 @@ import Button from "../../components/ui/Button";
 import ProfileHeader from "./components/ProfileHeader";
 import ScanHistoryTab from "./components/ScanHistoryTab";
 import SavedRoutinesTab from "./components/SavedRoutinesTab";
+import ScanHistoryService from "../../services/scanHistory";
+import ApiService from "../../services/api";
 
 const UserProfileDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("history");
-  const [userProfile, setUserProfile] = useState({
-    id: 1,
-    name: "Minh Anh Nguyen",
-    avatar:
-      "https://aic.com.vn/wp-content/uploads/2024/10/avatar-fb-mac-dinh.jpg",
-    avatarAlt:
-      "Professional headshot of young Vietnamese woman with long black hair wearing white blouse",
-    skinType: "combination",
-    primaryStatus: ["acne", "oiliness"],
-    joinDate: "03/15/2024",
-  });
+  const [userProfile, setUserProfile] = useState(null); // Start with null to check authentication
 
   const [stats, setStats] = useState({
-    totalScans: 24,
-    savedRoutines: 8,
+    totalScans: 0,
+    savedRoutines: 0,
     aiConsultations: 15,
     activeDays: 45,
   });
 
-  const [scanHistory, setScanHistory] = useState([
-    {
-      id: 1,
-      productName: "Anessa Perfect UV Sunscreen",
-      brandName: "Anessa",
-      productImage: "https://images.unsplash.com/photo-1562580836-cdbcc5152819",
-      productImageAlt:
-        "White tube of Anessa sunscreen with blue and gold packaging on white background",
-      scanDate: "11/07/2024",
-      scanTime: "2:30 PM",
-      safetyLevel: "safe",
-      ingredientCount: 18,
-      riskIngredients: 0,
-    },
-    {
-      id: 2,
-      productName: "The Ordinary Vitamin C Serum",
-      brandName: "The Ordinary",
-      productImage:
-        "https://images.unsplash.com/photo-1696256016872-1526c9d0e280",
-      productImageAlt:
-        "Clear glass dropper bottle of The Ordinary Vitamin C serum with white label",
-      scanDate: "11/05/2024",
-      scanTime: "9:15 AM",
-      safetyLevel: "neutral",
-      ingredientCount: 12,
-      riskIngredients: 1,
-    },
-    {
-      id: 3,
-      productName: "CeraVe Foaming Facial Cleanser",
-      brandName: "CeraVe",
-      productImage:
-        "https://images.unsplash.com/photo-1735286770188-de4c5131589a",
-      productImageAlt:
-        "Blue and white pump bottle of CeraVe foaming facial cleanser",
-      scanDate: "11/03/2024",
-      scanTime: "8:45 PM",
-      safetyLevel: "safe",
-      ingredientCount: 15,
-      riskIngredients: 0,
-    },
-    {
-      id: 4,
-      productName: "Neutrogena Hydro Boost Moisturizer",
-      brandName: "Neutrogena",
-      productImage:
-        "https://images.unsplash.com/photo-1722979350117-d2b6c5e111ee",
-      productImageAlt:
-        "Blue jar of Neutrogena Hydro Boost moisturizer with clear gel texture visible",
-      scanDate: "11/01/2024",
-      scanTime: "4:20 PM",
-      safetyLevel: "risky",
-      ingredientCount: 22,
-      riskIngredients: 3,
-    },
-    {
-      id: 5,
-      productName: "Paula's Choice BHA 2% Toner",
-      brandName: "Paula's Choice",
-      productImage:
-        "https://images.unsplash.com/photo-1620159071448-dc1de8b92703",
-      productImageAlt:
-        "Dark blue bottle of Paula's Choice BHA liquid exfoliant with pump dispenser",
-      scanDate: "10/30/2024",
-      scanTime: "11:30 AM",
-      safetyLevel: "neutral",
-      ingredientCount: 14,
-      riskIngredients: 1,
-    },
-  ]);
+  const [scanHistory, setScanHistory] = useState([]);
 
-  const [savedRoutines, setSavedRoutines] = useState([
-    {
-      id: 1,
-      name: "Acne Care Routine",
-      type: "complete",
-      createdDate: "10/25/2024",
-      lastUsed: "11/07/2024",
-      usageCount: 12,
-      morningSteps: [
-        "Gentle cleanser",
-        "pH balancing toner",
-        "Niacinamide serum",
-        "Oil-free moisturizer",
-        "SPF 50 sunscreen",
-      ],
+  // Load scan history from localStorage on component mount
+  useEffect(() => {
+    loadScanHistory();
+    loadSavedRoutines();
 
-      eveningSteps: [
-        "Oil cleanser",
-        "Deep cleansing face wash",
-        "2% BHA toner",
-        "Retinol serum (3 times/week)",
-        "Restorative moisturizer",
-        "Anti-aging eye cream",
-      ],
-    },
-    {
-      id: 2,
-      name: "Minimal Routine for Sensitive Skin",
-      type: "minimal",
-      createdDate: "10/20/2024",
-      lastUsed: "11/06/2024",
-      usageCount: 8,
-      morningSteps: [
-        "Micellar water",
-        "Light moisturizer",
-        "Mineral sunscreen",
-      ],
+    // Listen for storage changes (if scan history is updated in another tab)
+    const handleStorageChange = (e) => {
+      if (e.key === "skincare_scan_history") {
+        loadScanHistory();
+      }
+    };
 
-      eveningSteps: [
-        "Soap-free cleanser",
-        "Hyaluronic acid serum",
-        "Restorative moisturizer",
-      ],
-    },
-    {
-      id: 3,
-      name: "Anti-Aging Routine",
-      type: "complete",
-      createdDate: "10/15/2024",
-      lastUsed: "11/05/2024",
-      usageCount: 15,
-      morningSteps: [
-        "Enzyme cleanser",
-        "Vitamin C toner",
-        "20% Vitamin C serum",
-        "Peptide eye cream",
-        "Antioxidant moisturizer",
-        "SPF 50+ sunscreen",
-      ],
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
-      eveningSteps: [
-        "Cleansing oil",
-        "Amino acid face wash",
-        "Skin prep toner",
-        "0.5% Retinol serum",
-        "Night cream",
-        "Facial oil",
-      ],
-    },
-  ]);
+  const loadScanHistory = () => {
+    const history = ScanHistoryService.getScanHistory();
+    setScanHistory(history);
+
+    // Update stats based on loaded history
+    const totalScans = history.length;
+    const safeScans = history.filter(
+      (scan) => scan.safetyLevel === "safe"
+    ).length;
+    const moderateScans = history.filter(
+      (scan) => scan.safetyLevel === "moderate"
+    ).length;
+    const cautionScans = history.filter(
+      (scan) => scan.safetyLevel === "caution"
+    ).length;
+    const activeDays = ScanHistoryService.calculateActiveDays(history);
+
+    setStats((prevStats) => ({
+      ...prevStats,
+      totalScans,
+      safeScans,
+      moderateScans,
+      cautionScans,
+      activeDays,
+    }));
+  };
+
+  const loadSavedRoutines = async () => {
+    try {
+      const userProfile = JSON.parse(
+        localStorage.getItem("userProfile") || "{}"
+      );
+      const username = userProfile?.username || userProfile?.name;
+
+      if (!username) {
+        console.log("No username found, skipping routine load");
+        setSavedRoutines([]);
+        return;
+      }
+
+      try {
+        // Try to get user from database
+        const userResponse = await ApiService.getUserByUsername(username);
+        const userId = userResponse.user._id;
+
+        // Get routines from database
+        const routinesResponse = await ApiService.getSavedRoutines(userId);
+        const routines = routinesResponse.routines.map((routine) => ({
+          ...routine,
+          id: routine._id, // Add id field for frontend compatibility
+        }));
+
+        setSavedRoutines(routines);
+        console.log("Initial load - saved routines:", routines.length);
+      } catch (error) {
+        // User doesn't exist in database yet - just use empty array
+        console.log("User not found in database, showing empty routines");
+        setSavedRoutines([]);
+      }
+    } catch (error) {
+      console.error("Error loading saved routines:", error);
+      setSavedRoutines([]);
+    }
+  };
+
+  const [savedRoutines, setSavedRoutines] = useState([]);
 
   const [preferences, setPreferences] = useState({
     language: "vi",
@@ -193,18 +127,27 @@ const UserProfileDashboard = () => {
     },
   });
 
+  // Update stats when data changes
+  useEffect(() => {
+    setStats((prev) => ({
+      ...prev,
+      totalScans: scanHistory?.length || 0,
+      savedRoutines: savedRoutines?.length || 0,
+    }));
+  }, [scanHistory?.length, savedRoutines?.length]);
+
   const tabs = [
     {
       id: "history",
       label: "Scan History",
       icon: "History",
-      count: scanHistory?.length,
+      count: scanHistory?.length || 0,
     },
     {
       id: "routines",
       label: "Saved Routines",
       icon: "Star",
-      count: savedRoutines?.length,
+      count: savedRoutines?.length || 0,
     },
   ];
 
@@ -240,6 +183,15 @@ const UserProfileDashboard = () => {
   };
 
   useEffect(() => {
+    // Check authentication first
+    const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+
+    if (!isAuthenticated) {
+      // Redirect to login if not authenticated
+      navigate("/login");
+      return;
+    }
+
     // Load user data from localStorage or API
     const savedLanguage = localStorage.getItem("glowlens-language") || "vi";
     if (savedLanguage !== preferences?.language) {
@@ -250,28 +202,48 @@ const UserProfileDashboard = () => {
     const savedUserProfile = localStorage.getItem("userProfile");
     if (savedUserProfile) {
       const profileData = JSON.parse(savedUserProfile);
-      setUserProfile((prev) => ({
-        ...prev,
-        name: profileData.name || prev.name,
-        email: profileData.email || prev.email,
-        skinType: profileData.skinType || prev.skinType,
+      setUserProfile({
+        id: 1,
+        name: profileData.name || "User",
+        avatar:
+          profileData.avatar ||
+          "https://aic.com.vn/wp-content/uploads/2024/10/avatar-fb-mac-dinh.jpg",
+        avatarAlt: "User profile avatar",
+        skinType: profileData.skinType || "normal",
         primaryStatus:
-          profileData.primaryStatus ||
-          profileData.skinStatus ||
-          prev.primaryStatus,
-        joinDate: profileData.joinDate || prev.joinDate,
-      }));
+          profileData.primaryStatus || profileData.skinStatus || [],
+        joinDate:
+          profileData.joinDate || new Date().toLocaleDateString("en-US"),
+      });
+    } else {
+      // No saved profile, redirect to login
+      navigate("/login");
     }
-  }, []);
+  }, [navigate]);
 
   const renderTabContent = () => {
     switch (activeTab) {
       case "history":
-        return <ScanHistoryTab scanHistory={scanHistory} />;
+        return (
+          <ScanHistoryTab
+            scanHistory={scanHistory}
+            onHistoryUpdate={loadScanHistory}
+          />
+        );
       case "routines":
-        return <SavedRoutinesTab savedRoutines={savedRoutines} />;
+        return (
+          <SavedRoutinesTab
+            savedRoutines={savedRoutines}
+            onRoutinesChange={setSavedRoutines}
+          />
+        );
       default:
-        return <ScanHistoryTab scanHistory={scanHistory} />;
+        return (
+          <ScanHistoryTab
+            scanHistory={scanHistory}
+            onHistoryUpdate={loadScanHistory}
+          />
+        );
     }
   };
 
@@ -287,83 +259,93 @@ const UserProfileDashboard = () => {
       <div className="min-h-screen bg-background">
         <Header />
         <main className="pt-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="relative z-40" style={{ overflow: "visible" }}>
-              <ProfileHeader
-                userProfile={userProfile}
-                onUpdateProfile={handleUpdateProfile}
-              />
+          {/* Show loading while checking authentication */}
+          {!userProfile ? (
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading profile...</p>
+              </div>
             </div>
+          ) : (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="relative z-40" style={{ overflow: "visible" }}>
+                <ProfileHeader
+                  userProfile={userProfile}
+                  onUpdateProfile={handleUpdateProfile}
+                />
+              </div>
 
-            {/* Quick Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="default"
-                  onClick={() => navigate("/product")}
-                  iconName="Scan"
-                  iconPosition="left"
-                  className="rounded-3xl shadow-glow"
-                >
-                  Scan new product
-                </Button>
+              {/* Quick Actions */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="default"
+                    onClick={() => navigate("/product")}
+                    iconName="Scan"
+                    iconPosition="left"
+                    className="rounded-3xl shadow-glow animate-glass-float"
+                  >
+                    Scan new product
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/routine")}
+                    iconName="MessageCircle"
+                    iconPosition="left"
+                    className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black animate-glass-float"
+                  >
+                    Recommend routine
+                  </Button>
+                </div>
+              </div>
+
+              {/* Tabs Navigation */}
+              <div className="glass-card mb-6 rounded-2xl">
+                <div className="flex items-center border-b border-white/10">
+                  {tabs?.map((tab) => (
+                    <button
+                      key={tab?.id}
+                      onClick={() => setActiveTab(tab?.id)}
+                      className={`flex items-center gap-2 px-6 py-4 font-caption font-medium transition-smooth hover:bg-white/5 ${
+                        activeTab === tab?.id
+                          ? "text-primary border-b-2 border-primary bg-primary/5"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Icon name={tab?.icon} size={18} />
+                      <span>{tab?.label}</span>
+                      {tab?.count !== null && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            activeTab === tab?.id
+                              ? "bg-primary text-white"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {tab?.count}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tab Content */}
+                <div className="p-6">{renderTabContent()}</div>
+              </div>
+
+              {/* Logout Button */}
+              <div className="flex justify-end mb-4">
                 <Button
                   variant="outline"
-                  onClick={() => navigate("/chatbot")}
-                  iconName="MessageCircle"
-                  iconPosition="left"
-                  className="rounded-3xl hover:bg-[rgba(255,144,187,0.2)]"
+                  onClick={handleLogout}
+                  className="rounded-3xl text-red-500 border-red-500 hover:bg-[rgba(255,144,187,0.2)]"
                 >
-                  AI Consultation
+                  Log out
                 </Button>
               </div>
             </div>
-
-            {/* Tabs Navigation */}
-            <div className="glass-card mb-6 rounded-3xl">
-              <div className="flex items-center border-b border-white/10">
-                {tabs?.map((tab) => (
-                  <button
-                    key={tab?.id}
-                    onClick={() => setActiveTab(tab?.id)}
-                    className={`flex items-center gap-2 px-6 py-4 font-caption font-medium transition-smooth hover:bg-white/5 ${
-                      activeTab === tab?.id
-                        ? "text-primary border-b-2 border-primary bg-primary/5"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Icon name={tab?.icon} size={18} />
-                    <span>{tab?.label}</span>
-                    {tab?.count !== null && (
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          activeTab === tab?.id
-                            ? "bg-primary text-white"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {tab?.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab Content */}
-              <div className="p-6">{renderTabContent()}</div>
-            </div>
-
-            {/* Logout Button */}
-            <div className="flex justify-end mb-4">
-              <Button
-                variant="outline"
-                onClick={handleLogout}
-                className="rounded-3xl text-red-500 border-red-500 hover:bg-[rgba(255,144,187,0.2)]"
-              >
-                Log out
-              </Button>
-            </div>
-          </div>
+          )}
         </main>
       </div>
     </>

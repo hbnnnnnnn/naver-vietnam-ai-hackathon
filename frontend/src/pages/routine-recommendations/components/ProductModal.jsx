@@ -2,32 +2,7 @@ import React, { useState, useEffect } from "react";
 import Icon from "../../../components/AppIcon";
 import Image from "../../../components/AppImage";
 import Button from "../../../components/ui/Button";
-
-const getProductImage = async (query) => {
-  try {
-    console.log("Searching for:", query);
-    const apiUrl = "http://localhost:5731";
-    const res = await fetch(
-      `${apiUrl}/api/product-image?q=${encodeURIComponent(query)}`
-    );
-
-    console.log("API response status:", res.status);
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    console.log("API response data:", data);
-
-    if (data.imageUrl) {
-      console.log("Found image:", data.imageUrl);
-      return data.imageUrl;
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Error fetching product image:", error);
-    return null;
-  }
-};
+import { getCachedImage, getProductImage } from "../../../utils/imageCache";
 
 const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
   const [productImages, setProductImages] = useState({});
@@ -35,22 +10,41 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
   useEffect(() => {
     if (!products || products.length === 0) return;
 
-    // Clear previous images when products change
-    setProductImages({});
+    // Load cached images first
+    const initialImages = {};
+    products.forEach((product) => {
+      const brand = product.brand || product.product_brand || "Unknown Brand";
+      const name = product.name || product.product_name || "Unknown Product";
+      const query = `${brand} ${name} product`;
+      const cachedImage = getCachedImage(query);
+      if (cachedImage) {
+        initialImages[product._id || product.id] = cachedImage;
+      }
+    });
 
+    // Set cached images immediately
+    setProductImages(initialImages);
+
+    // Then fetch missing images
     products.forEach(async (product) => {
-      // Always try to fetch images, remove the condition
-      const query = `${product.brand} ${product.name} product`;
-      console.log("Fetching image for:", query);
-      const imageUrl = await getProductImage(query);
-      if (imageUrl) {
-        console.log("Got image URL:", imageUrl);
+      const productId = product._id || product.id;
+
+      // Skip if we already have cached image
+      if (initialImages[productId]) {
+        return;
+      }
+
+      try {
+        const brand = product.brand || product.product_brand || "Unknown Brand";
+        const name = product.name || product.product_name || "Unknown Product";
+        const query = `${brand} ${name} product`;
+        const imageUrl = await getProductImage(query);
         setProductImages((prev) => ({
           ...prev,
-          [product._id || product.id]: imageUrl,
+          [productId]: imageUrl,
         }));
-      } else {
-        console.log("No image found for:", query);
+      } catch (error) {
+        console.error("Error loading product image:", error);
       }
     });
   }, [products]);

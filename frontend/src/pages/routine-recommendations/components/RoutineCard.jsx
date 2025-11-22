@@ -99,7 +99,7 @@ const RoutineCard = ({
         ))}
       </div>
       <div className="mt-auto pt-4 border-t border-white/20">
-        <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span className="flex items-center space-x-1">
             <Icon name="Timer" size={14} />
             <span>

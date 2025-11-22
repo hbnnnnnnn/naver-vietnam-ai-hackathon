@@ -14,19 +14,27 @@ const RiskAssessmentCard = ({ riskData }) => {
         };
       case "low-risk":
         return {
-          color: "text-warning",
-          bg: "bg-warning/10 border-warning/20",
-          icon: "AlertTriangle",
+          color: "text-blue-500",
+          bg: "bg-blue/10 border-blue/10",
+          icon: "Info",
           label: "Low Risk",
-          description: "Should be tested before use",
+          description: "Generally safe with minimal concerns",
         };
       case "moderate-risk":
         return {
-          color: "text-error",
-          bg: "bg-error/10 border-error/20",
-          icon: "AlertCircle",
+          color: "text-warning",
+          bg: "bg-warning/10 border-warning/20",
+          icon: "AlertTriangle",
           label: "Moderate Risk",
-          description: "Should consult a specialist",
+          description: "Should be tested before use",
+        };
+      case "high-risk":
+        return {
+          color: "text-destructive",
+          bg: "bg-destructive/10 border-destructive/20",
+          icon: "AlertCircle",
+          label: "High Risk",
+          description: "Consult specialist before use",
         };
       default:
         return {
