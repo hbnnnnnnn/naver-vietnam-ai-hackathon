@@ -77,43 +77,185 @@ const SkinchateChatbot = () => {
       const response = await ApiService.sendChatMessage(userId, messageData?.content);
 
       if (response && response.bubbles && response.bubbles.length > 0) {
-        // Process Naver Clova response - only take the first text bubble
-        const firstTextBubble = response.bubbles.find(bubble => bubble.type === 'text');
+        let newBotMessages = [];
 
-        if (firstTextBubble) {
-          const botMessage = {
-            id: Date.now() + 1,
-            content: firstTextBubble?.data?.description || "Sorry, I couldn't understand that.",
-            timestamp: new Date(),
-            isUser: false,
-          };
+        response.bubbles.forEach((bubble, idx) => {
+          switch (bubble.type) {
+            case 'text':
+              if (bubble.data?.description) {
+                newBotMessages.push({
+                  id: Date.now() + idx,
+                  type: 'text',
+                  content: bubble.data.description,
+                  timestamp: new Date(),
+                  isUser: false,
+                });
+              }
+              break;
+            case 'image':
+              if (bubble.data?.url) {
+                newBotMessages.push({
+                  id: Date.now() + idx,
+                  type: 'image',
+                  image: bubble.data.url,
+                  imageAlt: bubble.data.urlAlias || 'Image',
+                  timestamp: new Date(),
+                  isUser: false,
+                });
+              }
+              break;
+            case 'button':
+              if (bubble.data?.description) {
+                newBotMessages.push({
+                  id: Date.now() + idx,
+                  type: 'button',
+                  content: bubble.data.description,
+                  timestamp: new Date(),
+                  isUser: false,
+                  button: bubble.data,
+                });
+              }
+              break;
+            case 'template':
+              // Extract cover and buttons
+              const cover = bubble.data?.cover?.data?.description || bubble.data?.cover?.data?.imageUrl;
+              const buttons = [];
+              if (bubble.data?.contentTable) {
+                bubble.data.contentTable.forEach(row => {
+                  row.forEach(cell => {
+                    if (cell.data?.type === 'button') {
+                      buttons.push({
+                        title: cell.data.title,
+                        postback: cell.data.data?.action?.data?.postback,
+                        url: cell.data.data?.action?.data?.url,
+                      });
+                    }
+                  });
+                });
+              }
+              newBotMessages.push({
+                id: Date.now() + idx,
+                type: 'template',
+                cover,
+                buttons,
+                timestamp: new Date(),
+                isUser: false,
+              });
+              break;
+            case 'carousel':
+              // Each card is a template
+              if (bubble.data?.cards) {
+                bubble.data.cards.forEach((card, cardIdx) => {
+                  const cover = card.data?.cover?.data?.description || card.data?.cover?.data?.imageUrl;
+                  const buttons = [];
+                  if (card.data?.contentTable) {
+                    card.data.contentTable.forEach(row => {
+                      row.forEach(cell => {
+                        if (cell.data?.type === 'button') {
+                          buttons.push({
+                            title: cell.data.title,
+                            postback: cell.data.data?.action?.data?.postback,
+                            url: cell.data.data?.action?.data?.url,
+                          });
+                        }
+                      });
+                    });
+                  }
+                  newBotMessages.push({
+                    id: Date.now() + idx + cardIdx,
+                    type: 'template',
+                    cover,
+                    buttons,
+                    timestamp: new Date(),
+                    isUser: false,
+                  });
+                });
+              }
+              break;
+            case 'flex':
+              // Store flex data for custom rendering
+              newBotMessages.push({
+                id: Date.now() + idx,
+                type: 'flex',
+                flex: bubble.data,
+                timestamp: new Date(),
+                isUser: false,
+              });
+              break;
+            case 'line_sticker':
+            case 'lineworks_sticker':
+              newBotMessages.push({
+                id: Date.now() + idx,
+                type: bubble.type,
+                sticker: bubble.data,
+                timestamp: new Date(),
+                isUser: false,
+              });
+              break;
+            default:
+              // Unknown type, fallback to description if available
+              if (bubble.data?.description) {
+                newBotMessages.push({
+                  id: Date.now() + idx,
+                  type: 'text',
+                  content: bubble.data.description,
+                  timestamp: new Date(),
+                  isUser: false,
+                });
+              }
+              break;
+          }
+        });
 
-          setMessages((prev) => [...prev, botMessage]);
+        if (newBotMessages.length > 0) {
+          setMessages((prev) => [...prev, ...newBotMessages]);
+        } else {
+          // Fallback
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now() + 999,
+              content: "Sorry, I couldn't understand that.",
+              timestamp: new Date(),
+              isUser: false,
+            },
+          ]);
         }
       } else {
         // Fallback response
-        const fallbackMessage = {
-          id: Date.now() + 1,
-          content: "I'm sorry, I'm having trouble processing your request right now. Please try again.",
-          timestamp: new Date(),
-          isUser: false,
-        };
-        setMessages((prev) => [...prev, fallbackMessage]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 999,
+            content: "I'm sorry, I'm having trouble processing your request right now. Please try again.",
+            timestamp: new Date(),
+            isUser: false,
+          },
+        ]);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-
       // Error fallback message
-      const errorMessage = {
-        id: Date.now() + 1,
-        content: "I'm experiencing some technical difficulties. Please try again later.",
-        timestamp: new Date(),
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 999,
+          content: "I'm experiencing some technical difficulties. Please try again later.",
+          timestamp: new Date(),
+          isUser: false,
+        },
+      ]);
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleShowMore = (messageId) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId ? { ...msg, showingAll: true } : msg
+      )
+    );
   };
 
   const handleSuggestionClick = (suggestion) => {
@@ -184,6 +326,8 @@ const SkinchateChatbot = () => {
                       message={message}
                       isUser={message?.isUser}
                       timestamp={message?.timestamp}
+                      onShowMore={handleShowMore}
+                      onSuggestionClick={(suggestion) => handleSendMessage({ content: suggestion })}
                     />
                   ))}
 
