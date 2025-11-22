@@ -270,6 +270,13 @@ const RoutineRecommendations = () => {
 
   // Fetch routines from backend API
   const fetchRoutines = async () => {
+    // Check authentication before fetching
+    const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
     setIsLoading(true);
     setApiError(null);
 
@@ -613,6 +620,16 @@ const RoutineRecommendations = () => {
 
   // Handle analysis start with progress
   const handleAnalysisStart = () => {
+    // Check authentication first
+    const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+    const userProfile = localStorage.getItem("userProfile");
+
+    if (!isAuthenticated || !userProfile) {
+      // Redirect to login if not authenticated
+      navigate("/login");
+      return;
+    }
+
     setIsAnalyzing(true);
     setAnalysisProgress(0);
     setShowResults(false);
@@ -770,7 +787,7 @@ const RoutineRecommendations = () => {
                 onClick={handleBackToProfile}
                 iconName="ArrowLeft"
                 iconPosition="left"
-                className="bg-white/80 hover:bg-white border-white/30 shadow-glass"
+                className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] shadow-glass-lg"
               >
                 Back to Profile
               </Button>
@@ -1037,12 +1054,12 @@ const RoutineRecommendations = () => {
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     {isViewingFromProfile && (
                       <Button
-                        variant="default"
+                        variant="outline"
                         onClick={handleBackToProfile}
                         iconName="ArrowLeft"
                         iconPosition="left"
                         iconSize={20}
-                        className="bg-gradient-primary hover:opacity-90 text-white py-3 font-medium shadow-glass-lg animate-glass-float rounded-3xl"
+                        className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black"
                       >
                         Back to Profile
                       </Button>
@@ -1060,8 +1077,8 @@ const RoutineRecommendations = () => {
                       Consult with AI
                     </Button>
                     <Button
-                      variant="outline"
-                      className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black"
+                      variant="default"
+                      className="rounded-3xl px-6 py-3"
                       iconName="Camera"
                       iconPosition="left"
                       iconSize={16}
