@@ -10,7 +10,7 @@ export async function extractIngredientsFromTextService(ocrText) {
   const tokens = cleanAndSplitIngredients(ingredientsBlock);
   const ingredientDocs = await IngredientCosing.find({}, 'inci_name').lean();
   const nameList = ingredientDocs.map(d => d.inci_name).filter(Boolean);
-  const matchedNames = await matchIngredientsWithFuzzy(tokens, nameList, 75);
+  const matchedNames = await matchIngredientsWithFuzzy(tokens, nameList, 85);
 
   // Get ingredients from Renude first
   const RenudeFields = 'name description benefits good_for risk_level reason';
