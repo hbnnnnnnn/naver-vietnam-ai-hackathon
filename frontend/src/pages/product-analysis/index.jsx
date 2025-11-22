@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Header from "../../components/ui/Header";
 import ImageUploadZone from "./components/ImageUploadZone";
 import OverviewCard from "./components/OverviewCard";
@@ -8,9 +9,12 @@ import AnalysisProgress from "./components/AnalysisProgress";
 import Icon from "../../components/AppIcon";
 import Button from "../../components/ui/Button";
 import ApiService from "../../services/api";
+import ScanHistoryService from "../../services/scanHistory";
 import config from "../../config";
 
 const ProductAnalysis = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [uploadedImages, setUploadedImages] = useState({
     front: null,
     back: null,
@@ -26,6 +30,19 @@ const ProductAnalysis = () => {
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState(null);
   const [useRealAPI, setUseRealAPI] = useState(config.features.useRealAPI);
+
+  // Load analysis results from navigation state (from scan history)
+  useEffect(() => {
+    if (location.state?.analysisResults && location.state?.showResults) {
+      setAnalysisResults(location.state.analysisResults);
+      setShowResults(true);
+
+      // If coming from history, use the real uploaded images
+      if (location.state.fromHistory && location.state.uploadedImages) {
+        setUploadedImages(location.state.uploadedImages);
+      }
+    }
+  }, [location.state]);
 
   // Mock analysis data
   const mockAnalysisData = {
@@ -231,6 +248,9 @@ const ProductAnalysis = () => {
       setIsAnalyzing(false);
       setAnalysisResults(transformedResults);
       setShowResults(true);
+
+      // Save scan result to history
+      ScanHistoryService.saveScanResult(transformedResults, uploadedImages);
     } catch (error) {
       console.error("API Analysis failed:", error);
       setError(error.message);
@@ -272,6 +292,9 @@ const ProductAnalysis = () => {
     setIsAnalyzing(false);
     setAnalysisResults(mockAnalysisData);
     setShowResults(true);
+
+    // Save scan result to history
+    ScanHistoryService.saveScanResult(mockAnalysisData, uploadedImages);
   };
 
   const handleAnalyzeProduct = () => {
@@ -383,11 +406,10 @@ const ProductAnalysis = () => {
                   </span>
                   <button
                     onClick={() => setUseRealAPI(!useRealAPI)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                      useRealAPI
-                        ? "bg-primary text-white"
-                        : "bg-muted text-muted-foreground"
-                    }`}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${useRealAPI
+                      ? "bg-primary text-white"
+                      : "bg-muted text-muted-foreground"
+                      }`}
                   >
                     {useRealAPI ? "Real API" : "Demo Mode"}
                   </button>
@@ -522,6 +544,19 @@ const ProductAnalysis = () => {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                {location.state?.fromHistory && (
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => navigate("/profile")}
+                    iconName="ArrowLeft"
+                    iconPosition="left"
+                    className="w-full sm:w-auto rounded-3xl border border-foreground hover:bg-[rgba(255,144,187,0.2)]"
+                  >
+                    Back to Profile
+                  </Button>
+                )}
+
                 <Button
                   variant="default"
                   size="lg"

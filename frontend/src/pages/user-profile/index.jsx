@@ -7,6 +7,7 @@ import Button from "../../components/ui/Button";
 import ProfileHeader from "./components/ProfileHeader";
 import ScanHistoryTab from "./components/ScanHistoryTab";
 import SavedRoutinesTab from "./components/SavedRoutinesTab";
+import ScanHistoryService from "../../services/scanHistory";
 
 const UserProfileDashboard = () => {
   const navigate = useNavigate();
@@ -30,160 +31,68 @@ const UserProfileDashboard = () => {
     activeDays: 45,
   });
 
-  const [scanHistory, setScanHistory] = useState([
-    {
-      id: 1,
-      productName: "Anessa Perfect UV Sunscreen",
-      brandName: "Anessa",
-      productImage: "https://images.unsplash.com/photo-1562580836-cdbcc5152819",
-      productImageAlt:
-        "White tube of Anessa sunscreen with blue and gold packaging on white background",
-      scanDate: "11/07/2024",
-      scanTime: "2:30 PM",
-      safetyLevel: "safe",
-      ingredientCount: 18,
-      riskIngredients: 0,
-    },
-    {
-      id: 2,
-      productName: "The Ordinary Vitamin C Serum",
-      brandName: "The Ordinary",
-      productImage:
-        "https://images.unsplash.com/photo-1696256016872-1526c9d0e280",
-      productImageAlt:
-        "Clear glass dropper bottle of The Ordinary Vitamin C serum with white label",
-      scanDate: "11/05/2024",
-      scanTime: "9:15 AM",
-      safetyLevel: "neutral",
-      ingredientCount: 12,
-      riskIngredients: 1,
-    },
-    {
-      id: 3,
-      productName: "CeraVe Foaming Facial Cleanser",
-      brandName: "CeraVe",
-      productImage:
-        "https://images.unsplash.com/photo-1735286770188-de4c5131589a",
-      productImageAlt:
-        "Blue and white pump bottle of CeraVe foaming facial cleanser",
-      scanDate: "11/03/2024",
-      scanTime: "8:45 PM",
-      safetyLevel: "safe",
-      ingredientCount: 15,
-      riskIngredients: 0,
-    },
-    {
-      id: 4,
-      productName: "Neutrogena Hydro Boost Moisturizer",
-      brandName: "Neutrogena",
-      productImage:
-        "https://images.unsplash.com/photo-1722979350117-d2b6c5e111ee",
-      productImageAlt:
-        "Blue jar of Neutrogena Hydro Boost moisturizer with clear gel texture visible",
-      scanDate: "11/01/2024",
-      scanTime: "4:20 PM",
-      safetyLevel: "risky",
-      ingredientCount: 22,
-      riskIngredients: 3,
-    },
-    {
-      id: 5,
-      productName: "Paula's Choice BHA 2% Toner",
-      brandName: "Paula's Choice",
-      productImage:
-        "https://images.unsplash.com/photo-1620159071448-dc1de8b92703",
-      productImageAlt:
-        "Dark blue bottle of Paula's Choice BHA liquid exfoliant with pump dispenser",
-      scanDate: "10/30/2024",
-      scanTime: "11:30 AM",
-      safetyLevel: "neutral",
-      ingredientCount: 14,
-      riskIngredients: 1,
-    },
-  ]);
+  const [scanHistory, setScanHistory] = useState([]);
+
+  // Load scan history from localStorage on component mount
+  useEffect(() => {
+    loadScanHistory();
+
+    // Listen for storage changes (if scan history is updated in another tab)
+    const handleStorageChange = (e) => {
+      if (e.key === 'skincare_scan_history') {
+        loadScanHistory();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const loadScanHistory = () => {
+    const history = ScanHistoryService.getScanHistory();
+    setScanHistory(history);
+
+    // Update stats based on loaded history
+    const totalScans = history.length;
+    const safeScans = history.filter(scan => scan.safetyLevel === 'safe').length;
+    const moderateScans = history.filter(scan => scan.safetyLevel === 'moderate').length;
+    const cautionScans = history.filter(scan => scan.safetyLevel === 'caution').length;
+    const activeDays = ScanHistoryService.calculateActiveDays(history);
+
+    setStats(prevStats => ({
+      ...prevStats,
+      totalScans,
+      safeScans,
+      moderateScans,
+      cautionScans,
+      activeDays
+    }));
+  };
 
   const [savedRoutines, setSavedRoutines] = useState([
     {
       id: 1,
-      routineName: "Acne Care Routine",
-      routineType: "complete",
-      createdAt: "2024-10-25T00:00:00Z",
-      skinType: "combination",
-      priceRange: "mid-range",
-      morningRoutine: {
-        steps: [
-          {
-            id: 1,
-            category: "Cleanser",
-            description: "Gentle cleanser",
-            timing: "1 minute",
-          },
-          {
-            id: 2,
-            category: "Treatment",
-            description: "pH balancing toner",
-            timing: "30 seconds",
-          },
-          {
-            id: 3,
-            category: "Treatment",
-            description: "Niacinamide serum",
-            timing: "30 seconds",
-          },
-          {
-            id: 4,
-            category: "Moisturizer",
-            description: "Oil-free moisturizer",
-            timing: "1 minute",
-          },
-          {
-            id: 5,
-            category: "Sunscreen",
-            description: "SPF 50 sunscreen",
-            timing: "1 minute",
-          },
-        ],
-      },
-      eveningRoutine: {
-        steps: [
-          {
-            id: 1,
-            category: "Cleanser",
-            description: "Oil cleanser",
-            timing: "2 minutes",
-          },
-          {
-            id: 2,
-            category: "Cleanser",
-            description: "Deep cleansing face wash",
-            timing: "1 minute",
-          },
-          {
-            id: 3,
-            category: "Treatment",
-            description: "2% BHA toner",
-            timing: "30 seconds",
-          },
-          {
-            id: 4,
-            category: "Treatment",
-            description: "Retinol serum (3x/week)",
-            timing: "30 seconds",
-          },
-          {
-            id: 5,
-            category: "Moisturizer",
-            description: "Restorative moisturizer",
-            timing: "1 minute",
-          },
-          {
-            id: 6,
-            category: "Eye cream",
-            description: "Anti-aging eye cream",
-            timing: "30 seconds",
-          },
-        ],
-      },
+      name: "Acne Care Routine",
+      type: "complete",
+      createdDate: "10/25/2024",
+      lastUsed: "11/07/2024",
+      usageCount: 12,
+      morningSteps: [
+        "Gentle cleanser",
+        "pH balancing toner",
+        "Niacinamide serum",
+        "Oil-free moisturizer",
+        "SPF 50 sunscreen",
+      ],
+
+      eveningSteps: [
+        "Oil cleanser",
+        "Deep cleansing face wash",
+        "2% BHA toner",
+        "Retinol serum (3 times/week)",
+        "Restorative moisturizer",
+        "Anti-aging eye cream",
+      ],
     },
     {
       id: 2,
@@ -342,12 +251,7 @@ const UserProfileDashboard = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case "history":
-        return (
-          <ScanHistoryTab
-            scanHistory={scanHistory}
-            onHistoryChange={setScanHistory}
-          />
-        );
+        return <ScanHistoryTab scanHistory={scanHistory} onHistoryUpdate={loadScanHistory} />;
       case "routines":
         return (
           <SavedRoutinesTab
@@ -356,7 +260,7 @@ const UserProfileDashboard = () => {
           />
         );
       default:
-        return <ScanHistoryTab scanHistory={scanHistory} />;
+        return <ScanHistoryTab scanHistory={scanHistory} onHistoryUpdate={loadScanHistory} />;
     }
   };
 
@@ -411,21 +315,19 @@ const UserProfileDashboard = () => {
                   <button
                     key={tab?.id}
                     onClick={() => setActiveTab(tab?.id)}
-                    className={`flex items-center gap-2 px-6 py-4 font-caption font-medium transition-smooth hover:bg-white/5 ${
-                      activeTab === tab?.id
-                        ? "text-primary border-b-2 border-primary bg-primary/5"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`flex items-center gap-2 px-6 py-4 font-caption font-medium transition-smooth hover:bg-white/5 ${activeTab === tab?.id
+                      ? "text-primary border-b-2 border-primary bg-primary/5"
+                      : "text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     <Icon name={tab?.icon} size={18} />
                     <span>{tab?.label}</span>
                     {tab?.count !== null && (
                       <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          activeTab === tab?.id
-                            ? "bg-primary text-white"
-                            : "bg-muted text-muted-foreground"
-                        }`}
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${activeTab === tab?.id
+                          ? "bg-primary text-white"
+                          : "bg-muted text-muted-foreground"
+                          }`}
                       >
                         {tab?.count}
                       </span>

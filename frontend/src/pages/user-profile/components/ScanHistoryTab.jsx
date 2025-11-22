@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import Icon from "../../../components/AppIcon";
 import Image from "../../../components/AppImage";
 import Button from "../../../components/ui/Button";
+import ScanHistoryService from "../../../services/scanHistory";
 
-const ScanHistoryTab = ({ scanHistory = [], onHistoryChange }) => {
+const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
   const navigate = useNavigate();
   const [selectedItems, setSelectedItems] = useState([]);
   const [sortBy, setSortBy] = useState("date");
@@ -24,11 +25,12 @@ const ScanHistoryTab = ({ scanHistory = [], onHistoryChange }) => {
   };
 
   const handleDeleteSelected = () => {
-    // Filter out selected items and update parent state
-    const updatedHistory = scanHistory.filter(
-      (item) => !selectedItems.includes(item.id)
-    );
-    onHistoryChange?.(updatedHistory);
+    if (selectedItems.length === 0) return;
+
+    const success = ScanHistoryService.deleteMultipleScans(selectedItems);
+    if (success && onHistoryUpdate) {
+      onHistoryUpdate(); // Refresh the history in parent component
+    }
     setSelectedItems([]);
     console.log("Deleted items:", selectedItems);
   };
@@ -44,8 +46,10 @@ const ScanHistoryTab = ({ scanHistory = [], onHistoryChange }) => {
     switch (safety) {
       case "safe":
         return "text-success";
+      case "moderate":
       case "neutral":
         return "text-warning";
+      case "caution":
       case "risky":
         return "text-destructive";
       default:
@@ -57,8 +61,10 @@ const ScanHistoryTab = ({ scanHistory = [], onHistoryChange }) => {
     switch (safety) {
       case "safe":
         return "bg-success/10";
+      case "moderate":
       case "neutral":
         return "bg-warning/10";
+      case "caution":
       case "risky":
         return "bg-destructive/10";
       default:
@@ -155,7 +161,7 @@ const ScanHistoryTab = ({ scanHistory = [], onHistoryChange }) => {
             </p>
             <Button
               variant="default"
-              onClick={() => navigate("/product-upload-scanner")}
+              onClick={() => navigate("/product")}
               iconName="Plus"
               iconPosition="left"
             >
@@ -166,11 +172,10 @@ const ScanHistoryTab = ({ scanHistory = [], onHistoryChange }) => {
           sortedHistory?.map((item) => (
             <div
               key={item?.id}
-              className={`rounded-2xl glass-card p-4 transition-smooth hover:shadow-glow ${
-                selectedItems?.includes(item?.id)
-                  ? "ring-2 ring-primary/50"
-                  : ""
-              }`}
+              className={`rounded-2xl glass-card p-4 transition-smooth hover:shadow-glow ${selectedItems?.includes(item?.id)
+                ? "ring-2 ring-primary/50"
+                : ""
+                }`}
             >
               <div className="flex items-start gap-4">
                 {/* Checkbox */}
@@ -220,8 +225,8 @@ const ScanHistoryTab = ({ scanHistory = [], onHistoryChange }) => {
                       )} ${getSafetyColor(item?.safetyLevel)}`}
                     >
                       {item?.safetyLevel === "safe" && "Safe"}
-                      {item?.safetyLevel === "neutral" && "Neutral"}
-                      {item?.safetyLevel === "risky" && "Risky"}
+                      {(item?.safetyLevel === "moderate" || item?.safetyLevel === "neutral") && "Moderate"}
+                      {(item?.safetyLevel === "caution" || item?.safetyLevel === "risky") && "Caution"}
                     </div>
                   </div>
 
@@ -242,8 +247,13 @@ const ScanHistoryTab = ({ scanHistory = [], onHistoryChange }) => {
                         variant="ghost"
                         size="sm"
                         onClick={() =>
-                          navigate("/product-analysis-results", {
-                            state: { productData: item },
+                          navigate("/product", {
+                            state: {
+                              analysisResults: item?.fullAnalysis,
+                              uploadedImages: item?.uploadedImages,
+                              showResults: true,
+                              fromHistory: true
+                            },
                           })
                         }
                         iconName="Eye"
