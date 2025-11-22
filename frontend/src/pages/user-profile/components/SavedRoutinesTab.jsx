@@ -26,8 +26,6 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
       );
       const username = userProfile?.username || userProfile?.name;
 
-      console.log("Fetching routines from database for user:", username);
-
       if (!username) {
         console.error("No username found");
         onRoutinesChange?.([]);
@@ -39,10 +37,8 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
         // Try to get user from database
         const userResponse = await ApiService.getUserByUsername(username);
         userId = userResponse.user._id;
-        console.log("Found existing user:", userId);
       } catch (error) {
         // User doesn't exist, create new user
-        console.log("User not found in database, creating new user...");
         const userData = {
           username: username,
           name: userProfile?.name || username,
@@ -52,7 +48,6 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
 
         const createResponse = await ApiService.createOrUpdateUser(userData);
         userId = createResponse.user._id;
-        console.log("Created new user:", userId);
       }
 
       // Get routines from database
@@ -62,7 +57,6 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
         id: routine._id, // Add id field for frontend compatibility
       }));
 
-      console.log("Loaded routines from database:", routines);
       onRoutinesChange?.(routines);
     } catch (error) {
       console.error("Error fetching saved routines:", error);
@@ -87,7 +81,6 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
       // Refresh routines list
       await fetchSavedRoutines();
       setSelectedRoutines([]);
-      console.log("Successfully deleted routines:", selectedRoutines);
     } catch (error) {
       console.error("Error deleting routines:", error);
       alert("Error deleting routine. Please try again.");
@@ -136,12 +129,10 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
   };
 
   const handleShareRoutine = (routine) => {
-    console.log("Sharing routine:", routine?.id);
     // Mock share functionality
   };
 
   const handleExportRoutine = (routine) => {
-    console.log("Exporting routine:", routine?.id);
     // Mock export functionality
   };
 
@@ -271,6 +262,13 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
                               <Icon name="User" size={14} />
                               <span>{routine?.skinType}</span>
                             </div>
+                            {routine?.uvIndex !== null &&
+                              routine?.uvIndex !== undefined && (
+                                <div className="flex items-center gap-1">
+                                  <Icon name="Sun" size={14} />
+                                  <span>UV: {routine?.uvIndex}</span>
+                                </div>
+                              )}
                           </div>
                         </div>
 

@@ -147,6 +147,8 @@ export const saveRoutine = async (req, res) => {
       routineType,
       skinType,
       priceRange,
+      uvIndex,
+      location,
       morningRoutine,
       eveningRoutine,
     } = req.body;
@@ -163,6 +165,8 @@ export const saveRoutine = async (req, res) => {
       routineType,
       skinType,
       priceRange,
+      uvIndex,
+      location,
       morningRoutine,
       eveningRoutine,
     });

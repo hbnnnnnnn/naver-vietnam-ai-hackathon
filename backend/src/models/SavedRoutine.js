@@ -56,6 +56,16 @@ const savedRoutineSchema = new mongoose.Schema(
       required: true,
       enum: ["budget-friendly", "mid-range", "premium"],
     },
+    uvIndex: {
+      type: Number,
+      min: 0,
+      max: 11,
+      default: null,
+    },
+    location: {
+      type: String,
+      default: null,
+    },
     morningRoutine: routineSchema,
     eveningRoutine: routineSchema,
   },

@@ -295,7 +295,7 @@ const UserProfileDashboard = () => {
                     iconPosition="left"
                     className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black animate-glass-float"
                   >
-                    Gợi ý routine
+                    Recommend routine
                   </Button>
                 </div>
               </div>

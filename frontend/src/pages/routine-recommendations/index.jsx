@@ -205,11 +205,6 @@ const RoutineRecommendations = () => {
       const username = userProfile?.username || userProfile?.name;
       const skinType = userProfile?.skinType?.toLowerCase() || "normal";
 
-      console.log("=== SAVE ROUTINE DEBUG ===");
-      console.log("Full userProfile:", userProfile);
-      console.log("Extracted username:", username);
-      console.log("isAuthenticated:", localStorage.getItem("isAuthenticated"));
-
       if (!username) {
         console.error("No username found in userProfile");
         alert("Please log in to save routines. Username is missing.");
@@ -221,10 +216,8 @@ const RoutineRecommendations = () => {
         // Try to get user from database
         const userResponse = await ApiService.getUserByUsername(username);
         userId = userResponse.user._id;
-        console.log("Found existing user:", userId);
       } catch (error) {
         // User doesn't exist, create new user
-        console.log("User not found in database, creating new user...");
         const userData = {
           username: username,
           name: userProfile?.name || username,
@@ -234,7 +227,6 @@ const RoutineRecommendations = () => {
 
         const createResponse = await ApiService.createOrUpdateUser(userData);
         userId = createResponse.user._id;
-        console.log("Created new user:", userId);
       }
 
       // Save complete routine to database
@@ -244,6 +236,8 @@ const RoutineRecommendations = () => {
         routineType,
         skinType,
         priceRange,
+        uvIndex: uvIndex || null,
+        location: "Ho Chi Minh City",
         morningRoutine: {
           steps: morningSteps || [],
         },
@@ -690,19 +684,9 @@ const RoutineRecommendations = () => {
   const transformRoutineSteps = (routine) => {
     if (!routine || !routine.steps) return [];
 
-    console.log("🔄 Transform routine steps - routine:", routine);
-
     return routine.steps.map((step, index) => {
       const products = step.products || [];
       const firstProduct = products[0];
-
-      console.log(`📦 Step ${index + 1} - ${step.name}:`, {
-        step: step,
-        products: products,
-        productsType: typeof products,
-        productsLength: Array.isArray(products) ? products.length : "Not array",
-        firstProduct: firstProduct,
-      });
 
       // Map step names to descriptions as fallback
       const descriptionMap = {
