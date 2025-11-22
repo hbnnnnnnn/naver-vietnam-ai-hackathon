@@ -193,7 +193,20 @@ const ProfileHeader = ({ userProfile, onUpdateProfile }) => {
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {userProfile?.joinDate}
+                    {userProfile?.joinDate
+                      ? new Date(userProfile.joinDate).toLocaleDateString(
+                          "vi-VN",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          }
+                        )
+                      : new Date().toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
                   </p>
                 </div>
               </div>

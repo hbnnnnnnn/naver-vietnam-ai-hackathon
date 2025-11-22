@@ -8,6 +8,7 @@ import ProfileHeader from "./components/ProfileHeader";
 import ScanHistoryTab from "./components/ScanHistoryTab";
 import SavedRoutinesTab from "./components/SavedRoutinesTab";
 import ScanHistoryService from "../../services/scanHistory";
+import ApiService from "../../services/api";
 
 const UserProfileDashboard = () => {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ const UserProfileDashboard = () => {
   // Load scan history from localStorage on component mount
   useEffect(() => {
     loadScanHistory();
+    loadSavedRoutines();
 
     // Listen for storage changes (if scan history is updated in another tab)
     const handleStorageChange = (e) => {
@@ -63,6 +65,44 @@ const UserProfileDashboard = () => {
       cautionScans,
       activeDays,
     }));
+  };
+
+  const loadSavedRoutines = async () => {
+    try {
+      const userProfile = JSON.parse(
+        localStorage.getItem("userProfile") || "{}"
+      );
+      const username = userProfile?.username || userProfile?.name;
+
+      if (!username) {
+        console.log("No username found, skipping routine load");
+        setSavedRoutines([]);
+        return;
+      }
+
+      try {
+        // Try to get user from database
+        const userResponse = await ApiService.getUserByUsername(username);
+        const userId = userResponse.user._id;
+
+        // Get routines from database
+        const routinesResponse = await ApiService.getSavedRoutines(userId);
+        const routines = routinesResponse.routines.map((routine) => ({
+          ...routine,
+          id: routine._id, // Add id field for frontend compatibility
+        }));
+
+        setSavedRoutines(routines);
+        console.log("Initial load - saved routines:", routines.length);
+      } catch (error) {
+        // User doesn't exist in database yet - just use empty array
+        console.log("User not found in database, showing empty routines");
+        setSavedRoutines([]);
+      }
+    } catch (error) {
+      console.error("Error loading saved routines:", error);
+      setSavedRoutines([]);
+    }
   };
 
   const [savedRoutines, setSavedRoutines] = useState([]);

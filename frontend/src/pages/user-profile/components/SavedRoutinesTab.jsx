@@ -199,11 +199,11 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
                 </p>
                 <Button
                   variant="default"
-                  onClick={() => navigate("/product-upload-scanner")}
+                  onClick={() => navigate("/routine")}
                   iconName="Plus"
                   iconPosition="left"
                 >
-                  Start Product Scan
+                  Start Routine Recommendations
                 </Button>
               </div>
             ) : (
