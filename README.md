@@ -203,9 +203,25 @@ The platform addresses the growing consumer demand for transparency in cosmetic 
 
 ```javascript
 // backend/src/services/ocr.service.js
-export async function runOcrService(secretKey, apiUrl, imagePath, imageFormat) {
-  return await callNaverOcr({ secretKey, apiUrl, imagePath, imageFormat });
-}
+const message = {
+    version: "V2",
+    requestId: `${Date.now()}`,
+    timestamp: Date.now(),
+    images: [{ format: imageFormat, name: path.basename(imagePath), data: null, url: null }],
+    lang: lang,
+    resultType: "json"
+};
+
+const response = await axios({
+    method: 'post',
+    url: apiUrl,
+    headers: { 'X-OCR-SECRET': secretKey, ...form.getHeaders() },
+    data: form,
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity,
+    timeout: 60000 // 60 second timeout for OCR calls
+});
+return response.data;
 ```
 
 **Features Used**:
@@ -269,11 +285,44 @@ export default class ClovaChatbot {
 **Implementation**:
 
 ```javascript
-// Used for:
-// - Benefit summarization from ingredient lists
-// - Product description generation
-// - Routine benefit analysis
-// - Content enhancement
+const prompt = `For each of the following skincare ingredients, return a JSON array where each object has ONLY these fields:
+  - name: The standard INCI name (should match the input name)
+  - description: A brief, informative description (1-2 sentences)
+  - benefits: Array of 3-4 key benefits (each as a full sentence)
+  - good_for: Array of specific keywords for skin types, conditions, or situations. You MUST select ONLY from this exact list: ['oily', 'dry', 'combination', 'sensitive', 'normal', 'acne', 'aging', 'pigmentation', 'sensitivity', 'oiliness', 'dryness']. Do NOT use generic terms like "all" or "all skin types". If an ingredient is suitable for multiple types, list them individually.
+  - risk_level: One of ['no-risk', 'low-risk', 'moderate-risk', 'high-risk', 'unknown'] indicating the safety risk of the ingredient
+  - reason: A brief explanation (1-2 sentences) for the assigned risk level
+Ingredients:
+${ingredientNames.map((name, i) => `${i + 1}. ${name}`).join('\n')}
+Return a JSON array of objects, one for each ingredient, in the same order as listed above. Do not include any extra fields.`;
+
+const response = await axios.post(
+    process.env.HYPER_CLOVA_API_URL,
+    {
+    messages: [
+        {
+        role: 'system',
+        content: 'You are a skincare ingredient expert. Provide accurate, concise information in JSON format.'
+        },
+        {
+        role: 'user',
+        content: prompt
+        },
+    ],
+    response_format: { "type": "json_object" },
+    maxTokens: 1500,
+    temperature: 0.3,
+    topP: 0.8,
+    repeatPenalty: 1.2
+    },
+    {
+    headers: {
+        'Authorization': `Bearer ${process.env.HYPER_CLOVA_API_KEY}`,
+        'Content-Type': 'application/json'
+    },
+    timeout: 60000 // 60 second timeout per LLM call
+    }
+);
 ```
 
 **Features Used**:
