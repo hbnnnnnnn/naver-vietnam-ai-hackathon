@@ -171,22 +171,29 @@ The platform addresses the growing consumer demand for transparency in cosmetic 
 ```javascript
 // backend/src/services/ocr.service.js
 const message = {
-    version: "V2",
-    requestId: `${Date.now()}`,
-    timestamp: Date.now(),
-    images: [{ format: imageFormat, name: path.basename(imagePath), data: null, url: null }],
-    lang: lang,
-    resultType: "json"
+  version: "V2",
+  requestId: `${Date.now()}`,
+  timestamp: Date.now(),
+  images: [
+    {
+      format: imageFormat,
+      name: path.basename(imagePath),
+      data: null,
+      url: null,
+    },
+  ],
+  lang: lang,
+  resultType: "json",
 };
 
 const response = await axios({
-    method: 'post',
-    url: apiUrl,
-    headers: { 'X-OCR-SECRET': secretKey, ...form.getHeaders() },
-    data: form,
-    maxBodyLength: Infinity,
-    maxContentLength: Infinity,
-    timeout: 60000 // 60 second timeout for OCR calls
+  method: "post",
+  url: apiUrl,
+  headers: { "X-OCR-SECRET": secretKey, ...form.getHeaders() },
+  data: form,
+  maxBodyLength: Infinity,
+  maxContentLength: Infinity,
+  timeout: 60000, // 60 second timeout for OCR calls
 });
 return response.data;
 ```
@@ -253,31 +260,32 @@ export default class ClovaChatbot {
 
 ```javascript
 const response = await axios.post(
-    process.env.HYPER_CLOVA_API_URL,
-    {
+  process.env.HYPER_CLOVA_API_URL,
+  {
     messages: [
-        {
-        role: 'system',
-        content: 'You are a skincare ingredient expert. Provide accurate, concise information in JSON format.'
-        },
-        {
-        role: 'user',
-        content: prompt
-        },
+      {
+        role: "system",
+        content:
+          "You are a skincare ingredient expert. Provide accurate, concise information in JSON format.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
     ],
-    response_format: { "type": "json_object" },
+    response_format: { type: "json_object" },
     maxTokens: 1500,
     temperature: 0.3,
     topP: 0.8,
-    repeatPenalty: 1.2
-    },
-    {
+    repeatPenalty: 1.2,
+  },
+  {
     headers: {
-        'Authorization': `Bearer ${process.env.HYPER_CLOVA_API_KEY}`,
-        'Content-Type': 'application/json'
+      Authorization: `Bearer ${process.env.HYPER_CLOVA_API_KEY}`,
+      "Content-Type": "application/json",
     },
-    timeout: 60000 // 60 second timeout per LLM call
-    }
+    timeout: 60000, // 60 second timeout per LLM call
+  }
 );
 ```
 
@@ -701,7 +709,7 @@ For questions or support, please reach out:
 
 - **Email**: tunigochy@gmail.com
 - **GitHub Issues**: [Project Issues](https://github.com/hbnnnnnnn/naver-vietnam-ai-hackathon/issues)
-- **Demo**: [Live Demo](https://your-demo-url.com)
+- **Demo**: [Live Demo](https://freely-parade-puzzles-distributors.trycloudflare.com/)
 
 ---
 
