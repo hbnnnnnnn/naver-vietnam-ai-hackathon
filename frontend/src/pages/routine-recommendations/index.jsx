@@ -1050,9 +1050,7 @@ const RoutineRecommendations = () => {
                     )}
                     <Button
                       variant="default"
-                      onClick={() =>
-                        (window.location.href = "/skincare-chatbot")
-                      }
+                      onClick={() => (window.location.href = "/chatbot")}
                       iconName="MessageCircle"
                       iconPosition="left"
                       iconSize={20}
@@ -1067,7 +1065,7 @@ const RoutineRecommendations = () => {
                       iconPosition="left"
                       iconSize={16}
                       onClick={() => {
-                        window.location.href = "/product-analysis";
+                        window.location.href = "/product";
                       }}
                     >
                       Analyze Products

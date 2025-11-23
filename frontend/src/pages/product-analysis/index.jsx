@@ -42,17 +42,17 @@ const ProductAnalysis = () => {
           suitable: scanData.data.suitable || 75, // Move suitable to product level
         },
         risk: {
-          categories: scanData.data.risk || {} // Backend already has risk levels as keys
+          categories: scanData.data.risk || {}, // Backend already has risk levels as keys
         },
-        ingredients: (scanData.data.ingredients || []).map(ing => ({
+        ingredients: (scanData.data.ingredients || []).map((ing) => ({
           name: ing.name,
           riskLevel: ing.risk_level,
           benefits: ing.benefits || [ing.description],
           concentration: "N/A",
-          reason: ing.reason || "No specific concerns"
-        }))
+          reason: ing.reason || "No specific concerns",
+        })),
       };
-    }    // Check if this is already the frontend format (has product.suitable, risk.categories)
+    } // Check if this is already the frontend format (has product.suitable, risk.categories)
     if (scanData.product && scanData.risk && scanData.risk.categories) {
       return scanData;
     }
@@ -69,19 +69,27 @@ const ProductAnalysis = () => {
       risk: {
         categories: {
           // Group ingredients by risk level
-          "no-risk": (scanData.ingredients || []).filter(ing => ing.riskLevel === "no-risk"),
-          "low-risk": (scanData.ingredients || []).filter(ing => ing.riskLevel === "low-risk"),
-          "moderate-risk": (scanData.ingredients || []).filter(ing => ing.riskLevel === "moderate-risk"),
-          "high-risk": (scanData.ingredients || []).filter(ing => ing.riskLevel === "high-risk"),
-        }
+          "no-risk": (scanData.ingredients || []).filter(
+            (ing) => ing.riskLevel === "no-risk"
+          ),
+          "low-risk": (scanData.ingredients || []).filter(
+            (ing) => ing.riskLevel === "low-risk"
+          ),
+          "moderate-risk": (scanData.ingredients || []).filter(
+            (ing) => ing.riskLevel === "moderate-risk"
+          ),
+          "high-risk": (scanData.ingredients || []).filter(
+            (ing) => ing.riskLevel === "high-risk"
+          ),
+        },
       },
-      ingredients: (scanData.ingredients || []).map(ing => ({
+      ingredients: (scanData.ingredients || []).map((ing) => ({
         name: ing.name,
         riskLevel: ing.riskLevel,
         benefits: [ing.purpose],
         concentration: "N/A",
-        reason: ing.concerns?.[0] || "No specific concerns"
-      }))
+        reason: ing.concerns?.[0] || "No specific concerns",
+      })),
     };
   };
 
@@ -92,13 +100,20 @@ const ProductAnalysis = () => {
       let transformedData;
       if (location.state.analysisResults.data) {
         // This is raw backend response, transform it
-        transformedData = ApiService.transformAnalysisResponse(location.state.analysisResults);
-      } else if (location.state.analysisResults.product && location.state.analysisResults.risk) {
+        transformedData = ApiService.transformAnalysisResponse(
+          location.state.analysisResults
+        );
+      } else if (
+        location.state.analysisResults.product &&
+        location.state.analysisResults.risk
+      ) {
         // Already transformed, use as-is
         transformedData = location.state.analysisResults;
       } else {
         // Database scan history format, need custom transform
-        transformedData = transformScanHistoryData(location.state.analysisResults);
+        transformedData = transformScanHistoryData(
+          location.state.analysisResults
+        );
       }
       setAnalysisResults(transformedData);
       setShowResults(true);
@@ -118,9 +133,9 @@ const ProductAnalysis = () => {
             category: "Analysis Result",
           },
           risk: {
-            categories: {}
+            categories: {},
           },
-          ingredients: []
+          ingredients: [],
         });
       }
       setShowResults(true);
@@ -181,82 +196,93 @@ const ProductAnalysis = () => {
     ingredients: [
       {
         name: "Vitamin C (L-Ascorbic Acid)",
-        description: "A potent antioxidant that brightens skin and protects against free radical damage.",
+        description:
+          "A potent antioxidant that brightens skin and protects against free radical damage.",
         benefits: [
           "Brightens skin tone",
           "Reduces dark spots",
           "Provides antioxidant protection",
-          "Supports collagen synthesis"
+          "Supports collagen synthesis",
         ],
         good_for: ["dry", "combination", "oily"],
         risk_level: "moderate-risk",
-        reason: "Can cause irritation at high concentrations or in sensitive skin; stability depends on formulation."
+        reason:
+          "Can cause irritation at high concentrations or in sensitive skin; stability depends on formulation.",
       },
       {
         name: "Hyaluronic Acid",
-        description: "A powerful humectant that attracts and retains moisture in the skin.",
+        description:
+          "A powerful humectant that attracts and retains moisture in the skin.",
         benefits: [
           "Deep hydration",
           "Plumps fine lines",
           "Improves skin elasticity",
-          "Supports skin barrier"
+          "Supports skin barrier",
         ],
         good_for: ["dry", "combination", "oily", "sensitive"],
         risk_level: "low-risk",
-        reason: "Widely considered safe and non-irritating for all skin types."
+        reason: "Widely considered safe and non-irritating for all skin types.",
       },
       {
         name: "Niacinamide (Vitamin B3)",
-        description: "A versatile ingredient that strengthens the skin barrier and improves uneven skin tone.",
+        description:
+          "A versatile ingredient that strengthens the skin barrier and improves uneven skin tone.",
         benefits: [
           "Regulates oil production",
           "Reduces redness",
           "Improves uneven skin tone",
           "Strengthens skin barrier",
-          "Minimizes pore appearance"
+          "Minimizes pore appearance",
         ],
         good_for: ["dry", "combination", "oily", "sensitive"],
         risk_level: "low-risk",
-        reason: "Generally well tolerated; suitable for most skin types at standard concentrations."
+        reason:
+          "Generally well tolerated; suitable for most skin types at standard concentrations.",
       },
       {
         name: "Alpha Hydroxy Acids (AHA)",
-        description: "A group of water-soluble acids that exfoliate the skin surface to improve texture and radiance.",
+        description:
+          "A group of water-soluble acids that exfoliate the skin surface to improve texture and radiance.",
         benefits: [
           "Exfoliates dead skin cells",
           "Improves skin texture",
           "Brightens skin",
-          "Enhances product absorption"
+          "Enhances product absorption",
         ],
         good_for: ["dry", "dull", "uneven_texture"],
         risk_level: "moderate-risk",
-        reason: "May cause irritation or sensitivity, especially in higher concentrations or sensitive skin."
+        reason:
+          "May cause irritation or sensitivity, especially in higher concentrations or sensitive skin.",
       },
       {
         name: "Phenoxyethanol",
-        description: "A broad-spectrum preservative used to protect products from bacteria and mold.",
+        description:
+          "A broad-spectrum preservative used to protect products from bacteria and mold.",
         benefits: [
           "Prevents microbial growth",
           "Maintains product safety",
-          "Extends shelf life"
+          "Extends shelf life",
         ],
         good_for: ["all"],
         risk_level: "moderate-risk",
-        reason: "Safe at <1% concentration; may cause irritation in very sensitive individuals."
+        reason:
+          "Safe at <1% concentration; may cause irritation in very sensitive individuals.",
       },
       {
         name: "Glycerin",
-        description: "A classic humectant that draws moisture into the skin and keeps it hydrated.",
+        description:
+          "A classic humectant that draws moisture into the skin and keeps it hydrated.",
         benefits: [
           "Hydrates skin",
           "Softens and smooths",
           "Supports skin barrier",
-          "Non-comedogenic"
+          "Non-comedogenic",
         ],
         good_for: ["dry", "combination", "oily", "sensitive"],
         risk_level: "low-risk",
-        reason: "One of the safest and most widely tolerated skincare ingredients."
-      }
+        reason:
+          "One of the safest and most widely tolerated skincare ingredients.",
+      },
     ],
   };
 
@@ -321,11 +347,13 @@ const ProductAnalysis = () => {
 
       // Save scan result to history - Follow routine pattern
       try {
-        const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+        const userProfile = JSON.parse(
+          localStorage.getItem("userProfile") || "{}"
+        );
         const username = userProfile?.username || userProfile?.name;
 
         if (!username) {
-          console.warn('No username found, skipping scan history save');
+          console.warn("No username found, skipping scan history save");
           return;
         }
 
@@ -356,12 +384,13 @@ const ProductAnalysis = () => {
           safetyLevel: "safe", // Calculate from risk
           overallScore: transformedResults.product?.suitable || 75,
           riskScore: 25, // Calculate from ingredients
-          ingredients: transformedResults.ingredients?.map(ing => ({
-            name: ing.name || "",
-            riskLevel: (ing.risk_level || "low-risk").toLowerCase(), // Ensure lowercase
-            purpose: ing.description || "",
-            concerns: ing.reason ? [ing.reason] : [],
-          })) || [],
+          ingredients:
+            transformedResults.ingredients?.map((ing) => ({
+              name: ing.name || "",
+              riskLevel: (ing.risk_level || "low-risk").toLowerCase(), // Ensure lowercase
+              purpose: ing.description || "",
+              concerns: ing.reason ? [ing.reason] : [],
+            })) || [],
           productImages: {
             front: uploadedImages?.front || "",
             back: uploadedImages?.back || "",
@@ -374,7 +403,7 @@ const ProductAnalysis = () => {
 
         await ApiService.saveScanHistory(scanData);
       } catch (error) {
-        console.error('Failed to save scan result:', error);
+        console.error("Failed to save scan result:", error);
       }
     } catch (error) {
       console.error("API Analysis failed:", error);
@@ -417,13 +446,15 @@ const ProductAnalysis = () => {
     setAnalysisResults(mockAnalysisData);
     setShowResults(true);
 
-    // Save scan result to history - Follow routine pattern  
+    // Save scan result to history - Follow routine pattern
     try {
-      const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+      const userProfile = JSON.parse(
+        localStorage.getItem("userProfile") || "{}"
+      );
       const username = userProfile?.username || userProfile?.name;
 
       if (!username) {
-        console.warn('No username found, skipping mock scan history save');
+        console.warn("No username found, skipping mock scan history save");
         return;
       }
 
@@ -454,12 +485,13 @@ const ProductAnalysis = () => {
         safetyLevel: "safe", // Calculate from risk
         overallScore: 85, // Mock score
         riskScore: 15, // Mock risk score
-        ingredients: mockAnalysisData.ingredients?.map(ing => ({
-          name: ing.name || "",
-          riskLevel: ing.risk_level || "low-risk",
-          purpose: ing.description || "",
-          concerns: ing.reason ? [ing.reason] : [],
-        })) || [],
+        ingredients:
+          mockAnalysisData.ingredients?.map((ing) => ({
+            name: ing.name || "",
+            riskLevel: ing.risk_level || "low-risk",
+            purpose: ing.description || "",
+            concerns: ing.reason ? [ing.reason] : [],
+          })) || [],
         productImages: {
           front: uploadedImages?.front || "",
           back: uploadedImages?.back || "",
@@ -473,14 +505,14 @@ const ProductAnalysis = () => {
             product: mockAnalysisData.product,
             suitable: 85,
             risk: mockAnalysisData.risk?.categories || {},
-            ingredients: mockAnalysisData.ingredients || []
-          }
+            ingredients: mockAnalysisData.ingredients || [],
+          },
         }, // Store in backend response format
       };
 
       await ApiService.saveScanHistory(scanData);
     } catch (error) {
-      console.error('Failed to save mock scan result:', error);
+      console.error("Failed to save mock scan result:", error);
     }
   };
 
@@ -612,7 +644,6 @@ const ProductAnalysis = () => {
               )}
             </div> */}
 
-
             {/* Instructions */}
             <div className="glass-card rounded-xl p-6 max-w-5xl mx-auto">
               <h3 className="text-lg font-heading font-semibold text-foreground mb-4">
@@ -735,9 +766,7 @@ const ProductAnalysis = () => {
                 <Button
                   variant="default"
                   size="lg"
-                  onClick={() =>
-                    (window.location.href = "/routine-recommendations")
-                  }
+                  onClick={() => (window.location.href = "/routine")}
                   iconName="Calendar"
                   iconPosition="left"
                   className="w-full sm:w-auto rounded-3xl"
@@ -748,7 +777,7 @@ const ProductAnalysis = () => {
                 <Button
                   variant="outline"
                   size="lg"
-                  onClick={() => (window.location.href = "/skincare-chatbot")}
+                  onClick={() => (window.location.href = "/chatbot")}
                   iconName="MessageCircle"
                   iconPosition="left"
                   className="w-full sm:w-auto rounded-3xl border border-foreground hover:bg-[rgba(255,144,187,0.2)]"
