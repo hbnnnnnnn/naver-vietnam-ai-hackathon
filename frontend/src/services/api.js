@@ -113,8 +113,13 @@ class ApiService {
     return this.request(`/products/${productId}`);
   }
 
-  async getProductsByUVIndex(uvIndex) {
-    return this.request(`/products/uv?uvIndex=${uvIndex}`);
+  async getProductsByUVIndex({ uvIndex, skinType, priceRange }) {
+    const params = new URLSearchParams({
+      uvIndex,
+      skinType,
+      priceRange,
+    }).toString();
+    return this.request(`/products/uv?${params}`);
   }
 
   async getProductsBySkinType(skinType) {
@@ -179,7 +184,26 @@ class ApiService {
    * Weather APIs
    */
   async getWeatherRecommendations(location) {
-    return this.request(`/weather?location=${encodeURIComponent(location)}`);
+    // location: "latitude,longitude" hoặc object { latitude, longitude }
+    let latitude, longitude;
+    if (typeof location === "string" && location.includes(",")) {
+      [latitude, longitude] = location.split(",");
+    } else if (
+      typeof location === "object" &&
+      location.latitude &&
+      location.longitude
+    ) {
+      latitude = location.latitude;
+      longitude = location.longitude;
+    }
+    if (!latitude || !longitude) {
+      throw new Error("Latitude and Longitude are required for weather API");
+    }
+    return this.request(
+      `/weather?latitude=${encodeURIComponent(
+        latitude
+      )}&longitude=${encodeURIComponent(longitude)}`
+    );
   }
 
   /**

@@ -13,8 +13,6 @@ import AnalysisProgress from "./components/AnalysisProgress";
 import { preloadRoutineImages } from "../../utils/imageCache";
 import ApiService from "../../services/api";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5731";
-
 const RoutineRecommendations = () => {
   const navigate = useNavigate();
   const [routineType, setRoutineType] = useState("minimal");
@@ -49,15 +47,8 @@ const RoutineRecommendations = () => {
     try {
       // Helper to fetch weather and update UV info
       const fetchWeatherAndUpdate = async (latitude, longitude) => {
-        const params = new URLSearchParams({
-          latitude: latitude.toString(),
-          longitude: longitude.toString(),
-        });
-        const response = await fetch(`${API_URL}/weather?${params}`);
-        if (!response.ok) {
-          throw new Error(`Weather API error: ${response.status}`);
-        }
-        const data = await response.json();
+        const location = `${latitude},${longitude}`;
+        const data = await ApiService.getWeatherRecommendations(location);
         const now = new Date();
         const currentHourIndex = now.getHours();
         const currentUV = data.hourly?.uv_index?.[currentHourIndex] || 0;
@@ -153,21 +144,13 @@ const RoutineRecommendations = () => {
   // Fetch sunscreen products from backend using UV index and skin type
   const fetchSunscreenProducts = async (uvIndex, skinType) => {
     try {
-      const params = new URLSearchParams({
+      const filters = {
         uvIndex: uvIndex?.toString() || "0",
         skinType: skinType || "normal",
         priceRange: priceRange || "budget-friendly",
-      });
-
-      const response = await fetch(`${API_URL}/products/uv?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`Products API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Transform products with rating and image (limit to top 3)
+      };
+      const data = await ApiService.getProductsByUVIndex(filters);
+      // Transform products with rating and image (limit to top 5)
       const transformedProducts = data.slice(0, 5).map((product) => ({
         ...product,
         id: product._id,
@@ -179,7 +162,6 @@ const RoutineRecommendations = () => {
           product.name || "Unknown Product"
         }`,
       }));
-
       setSunscreenProducts(transformedProducts);
     } catch (error) {
       console.error("Error fetching sunscreen products:", error);
@@ -277,19 +259,13 @@ const RoutineRecommendations = () => {
       );
       const skinType = userProfile?.skinType?.toLowerCase() || "normal";
 
-      const params = new URLSearchParams({
+      const filters = {
         skinType: skinType,
         strategy: routineType,
         budgetRange: priceRange,
-      });
+      };
 
-      const response = await fetch(`${API_URL}/routines?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await ApiService.getRoutines(filters);
 
       // Separate morning and night routines
       const morningData = data.routines?.find((r) => r.name === "morning");
