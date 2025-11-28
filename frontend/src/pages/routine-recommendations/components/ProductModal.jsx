@@ -103,7 +103,10 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3, 4, 5]?.map((i) => (
-                  <div key={i} className="glass-card p-4 animate-pulse">
+                  <div
+                    key={`skeleton-${i}`}
+                    className="glass-card p-4 animate-pulse"
+                  >
                     <div className="aspect-square bg-white/20 rounded-lg mb-4"></div>
                     <div className="h-4 bg-white/20 rounded mb-2"></div>
                     <div className="h-3 bg-white/20 rounded mb-2"></div>
@@ -113,9 +116,9 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products?.map((product) => (
+                {products?.map((product, idx) => (
                   <div
-                    key={product?.id}
+                    key={product?._id || product?.id || idx}
                     className="rounded-xl bg-white/60 glass-card p-4 hover:scale-[1.02] transition-all duration-200 flex flex-col justify-between"
                   >
                     <div>
@@ -169,7 +172,13 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
                               ?.slice(0, 3)
                               ?.map((ingredient, index) => (
                                 <span
-                                  key={index}
+                                  key={
+                                    product?._id || product?.id
+                                      ? `${
+                                          product._id || product.id
+                                        }-${ingredient}`
+                                      : index
+                                  }
                                   className="px-2 py-1 text-xs bg-gradient-primary/20 text-primary rounded-full"
                                 >
                                   {ingredient.length > 50
