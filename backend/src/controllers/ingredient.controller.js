@@ -88,16 +88,22 @@ export const productAnalyzeFromImages = async (req, res) => {
       benefits: [...productInfo.benefits, ...summarizedBenefits],
     };
 
+    // If no ingredients or no product info found, set success to false
+    const hasIngredients = Array.isArray(ingredientResult) && ingredientResult.length > 0;
+    const hasProductInfo = productInfo && Array.isArray(productInfo.benefits) && productInfo.benefits.length > 0;
+    const success = hasIngredients && hasProductInfo;
     res.json({
-      status: "success",
-      data: {
-        product: enrichedProductInfo,
-        suitable: suitabilityScores,
-        risk: groupedByRisk,
-        ingredients: ingredientResult,
-      },
+    success,
+    data: success
+        ? {
+            product: enrichedProductInfo,
+            suitable: suitabilityScores,
+            risk: groupedByRisk,
+            ingredients: ingredientResult,
+        }
+        : null,
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 };
