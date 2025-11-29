@@ -709,7 +709,7 @@ For questions or support, please reach out:
 
 - **Email**: tunigochy@gmail.com
 - **GitHub Issues**: [Project Issues](https://github.com/hbnnnnnnn/naver-vietnam-ai-hackathon/issues)
-- **Demo**: [Live Demo](https://freely-parade-puzzles-distributors.trycloudflare.com/)
+- **Demo**: [Live Demo](https://github.com/hbnnnnnnn/naver-vietnam-ai-hackathon)
 
 ---
 
