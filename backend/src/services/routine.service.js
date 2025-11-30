@@ -25,7 +25,7 @@ async function selectProductsForSteps(steps, field) {
 
         if (step.minSpf) query.spf = { $gte: step.minSpf };
 
-        const product = await Product.findOne(query).sort({ rank: 1 });
+        const product = await Product.findOne(query).sort({ rank: -1 });
         if (product) {
             selected.push({
                 name: step.name,

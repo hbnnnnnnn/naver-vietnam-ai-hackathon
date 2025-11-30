@@ -10,7 +10,12 @@ const routineSchema = new mongoose.Schema({
     steps: [routineStepSchema],
     skinType: { type: String, enum: ['combination', 'dry', 'oily', 'normal', 'sensitive'], required: true },
     strategy: { type: String, enum: ['minimal', 'complete', 'focus_treatment', 'focus_hydration', 'anti_aging'], required: true },
-    budgetRange: { type: String, enum: ['budget-friendly', 'mid-range', 'premium'], required: true }
+    budgetRange: { type: String, enum: ['budget-friendly', 'mid-range', 'premium'], required: false },
+    totalPrice: { type: Number, required: true },
+    avgRank: { type: Number, required: true }
 }, { timestamps: true });
+
+routineSchema.index({ skinType: 1, totalPrice: 1, avgRank: 1 });
+routineSchema.index({ skinType: 1, strategy: 1, totalPrice: 1 });
 
 export default mongoose.model('Routine', routineSchema);

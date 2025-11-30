@@ -1,4 +1,5 @@
 import Routine from "../models/Routine.js";
+import Product from "../models/Product.js";
 
 const STRATEGY_ORDER = {
   minimal: 1,
@@ -221,5 +222,138 @@ export const deleteRoutineById = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error deleting routine", error: error.message });
+  }
+};
+
+export const getRoutinesByPriceRange = async (req, res) => {
+  try {
+    const { minPrice, maxPrice, skinType, strategy, name } = req.query;
+
+    if (!skinType) {
+      return res
+        .status(400)
+        .json({ message: "skinType query parameter is required" });
+    }
+
+    if (!maxPrice) {
+      return res
+        .status(400)
+        .json({ message: "maxPrice query parameter is required" });
+    }
+
+    const min = minPrice ? parseFloat(minPrice) : 0;
+    const max = parseFloat(maxPrice);
+
+    if (isNaN(min) || isNaN(max)) {
+      return res.status(400).json({ message: "Invalid price values" });
+    }
+
+    const query = {
+      skinType: skinType.toLowerCase(),
+      totalPrice: { $gte: min, $lte: max },
+    };
+
+    if (strategy) {
+      query.strategy = strategy;
+    }
+
+    if (name) {
+      query.name = name;
+    }
+
+    // Get all matching routines and populate products
+    let routines = await Routine.find(query).populate("steps.products").lean();
+
+    if (routines.length === 0) {
+      return res.status(404).json({
+        message: "No routines found for the specified price range and criteria",
+      });
+    }
+
+    // Sort by avgRank (best quality - higher is better) first, then by totalPrice (highest) second
+    routines.sort((a, b) => {
+      if (a.avgRank !== b.avgRank) {
+        return b.avgRank - a.avgRank; // Higher rank is better
+      }
+      return b.totalPrice - a.totalPrice; // Higher price second
+    });
+
+    // Return top routine with highest rating and highest price
+    const topRoutine = routines[0];
+
+    res.status(200).json({
+      routine: topRoutine,
+      totalMatches: routines.length,
+    });
+  } catch (error) {
+    console.error("Error in getRoutinesByPriceRange:", error);
+    res
+      .status(500)
+      .json({ message: "Error retrieving routines", error: error.message });
+  }
+};
+
+export const getProductsByPriceRange = async (req, res) => {
+  try {
+    const { minPrice, maxPrice, skinType, category, limit } = req.query;
+
+    if (!skinType) {
+      return res
+        .status(400)
+        .json({ message: "skinType query parameter is required" });
+    }
+
+    if (!maxPrice) {
+      return res
+        .status(400)
+        .json({ message: "maxPrice query parameter is required" });
+    }
+
+    const min = minPrice ? parseFloat(minPrice) : 0;
+    const max = parseFloat(maxPrice);
+    const resultLimit = limit ? parseInt(limit) : 5;
+
+    if (isNaN(min) || isNaN(max)) {
+      return res.status(400).json({ message: "Invalid price values" });
+    }
+
+    if (resultLimit < 1 || resultLimit > 10) {
+      return res
+        .status(400)
+        .json({ message: "limit must be between 1 and 10" });
+    }
+
+    const skinField = `${skinType.toLowerCase()}_skin`;
+
+    const query = {
+      [skinField]: true,
+      price: { $gte: min, $lte: max },
+    };
+
+    if (category) {
+      query.category = category;
+    }
+
+    // Get products sorted by rank (quality - higher is better) and price (higher is better)
+    const products = await Product.find(query)
+      .sort({ rank: -1, price: -1 })
+      .limit(resultLimit)
+      .lean();
+
+    if (products.length === 0) {
+      return res.status(404).json({
+        message: "No products found for the specified price range and criteria",
+      });
+    }
+
+    res.status(200).json({
+      products,
+      count: products.length,
+    });
+  } catch (error) {
+    console.error("Error in getProductsByPriceRange:", error);
+    res
+      .status(500)
+      .json({ message: "Error retrieving products", error: error.message });
   }
 };

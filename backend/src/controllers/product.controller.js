@@ -161,7 +161,7 @@ export const getProductsByUVIndex = async (req, res) => {
       }
     }
 
-    let products = await Product.find(query).sort({ rank: 1 });
+    let products = await Product.find(query).sort({ rank: -1 });
 
     // Filter out products with missing name/brand
     products = products.filter((p) => p.name && p.brand);
@@ -189,7 +189,7 @@ export const getProductsByUserSkinType = async (req, res) => {
     }
 
     const query = { [field]: true };
-    const products = await Product.find(query).sort({ rank: 1 });
+    const products = await Product.find(query).sort({ rank: -1 });
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({
