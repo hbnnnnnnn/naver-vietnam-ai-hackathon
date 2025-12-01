@@ -7,7 +7,7 @@ import {
   getRoutineByBudgetRange,
   deleteRoutineById,
   getRoutinesByPriceRange,
-  getProductsByPriceRange
+  getRoutinesByProductPriceRange
 } from "../controllers/routine.controller.js";
 
 const router = express.Router();
@@ -17,7 +17,7 @@ router.post('/', createRoutine);
 router.get('/budget', getRoutineByBudgetRange);
 router.get('/price', getRoutineByPrice);
 router.get('/price-range', getRoutinesByPriceRange);
-router.get('/products/price-range', getProductsByPriceRange);
+router.get('/products/price-range', getRoutinesByProductPriceRange);
 router.delete('/:id', deleteRoutineById);
 
 export default router;

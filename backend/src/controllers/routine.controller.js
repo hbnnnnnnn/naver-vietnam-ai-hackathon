@@ -293,7 +293,7 @@ export const getRoutinesByPriceRange = async (req, res) => {
   }
 };
 
-export const getProductsByPriceRange = async (req, res) => {
+export const getRoutinesByProductPriceRange = async (req, res) => {
   try {
     const { minPrice, maxPrice, skinType, strategy, name } = req.query;
 
@@ -368,7 +368,7 @@ export const getProductsByPriceRange = async (req, res) => {
       count: filteredRoutines.length,
     });
   } catch (error) {
-    console.error("Error in getProductsByPriceRange:", error);
+    console.error("Error in getRoutinesByProductPriceRange:", error);
     res
       .status(500)
       .json({ message: "Error retrieving routines", error: error.message });
