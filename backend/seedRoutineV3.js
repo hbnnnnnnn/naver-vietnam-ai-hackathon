@@ -119,7 +119,8 @@ async function generateRoutine(type, skinType, bracket, strategy) {
     });
   }
 
-  if (selectedSteps.length < 3) return null;
+  // Require at least 2 steps for a valid routine (minimal night has 2 required steps)
+  if (selectedSteps.length < 2) return null;
 
   // Calculate total price and avg rank
   let totalPrice = 0;

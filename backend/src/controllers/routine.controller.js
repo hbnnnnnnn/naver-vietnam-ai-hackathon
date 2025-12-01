@@ -9,6 +9,60 @@ const STRATEGY_ORDER = {
   anti_aging: 5,
 };
 
+// Helper function to select the single best morning/night pair
+const groupRoutinesByMorningNight = (routines, maxBudget = null) => {
+  // Separate morning and night routines
+  const morningRoutines = routines.filter(r => r.name === "morning");
+  const nightRoutines = routines.filter(r => r.name === "night");
+
+  // Find all possible pairs and calculate combined metrics
+  const pairs = [];
+
+  for (const morning of morningRoutines) {
+    for (const night of nightRoutines) {
+      // Only pair routines with same strategy and priceBracket
+      if (morning.strategy === night.strategy && morning.priceBracket === night.priceBracket) {
+        const combinedPrice = morning.totalPrice + night.totalPrice;
+
+        // If maxBudget is provided, only include pairs within budget
+        if (maxBudget !== null && combinedPrice > maxBudget) {
+          continue;
+        }
+
+        pairs.push({
+          strategy: morning.strategy,
+          priceBracket: morning.priceBracket,
+          morning: morning,
+          night: night,
+          combinedPrice: combinedPrice,
+          combinedRank: (morning.avgRank + night.avgRank) / 2,
+        });
+      }
+    }
+  }
+
+  if (pairs.length === 0) return null;
+
+  // Sort pairs by combined price (highest first), then by combined rank (highest second)
+  pairs.sort((a, b) => {
+    if (a.combinedPrice !== b.combinedPrice) {
+      return b.combinedPrice - a.combinedPrice; // Higher price is better
+    }
+    return b.combinedRank - a.combinedRank; // Higher rank is better
+  });
+
+  // Return only the top pair
+  const bestPair = pairs[0];
+  return {
+    strategy: bestPair.strategy,
+    priceBracket: bestPair.priceBracket,
+    morning: bestPair.morning,
+    night: bestPair.night,
+    combinedPrice: bestPair.combinedPrice,
+    combinedRank: bestPair.combinedRank,
+  };
+};
+
 export const getRoutine = async (req, res) => {
   try {
     const { skinType, priceBracket, strategy } = req.query;
@@ -40,14 +94,16 @@ export const getRoutine = async (req, res) => {
       });
     }
 
-    // Sort routines
-    routines.sort((a, b) => {
-      const orderA = STRATEGY_ORDER[a.strategy] || 999;
-      const orderB = STRATEGY_ORDER[b.strategy] || 999;
-      return orderA - orderB;
-    });
+    // Get the best morning/night pair
+    const bestPair = groupRoutinesByMorningNight(routines);
 
-    res.status(200).json({ routines });
+    if (!bestPair) {
+      return res.status(404).json({
+        message: "No matching morning/night routine pairs found",
+      });
+    }
+
+    res.status(200).json({ routine: bestPair });
   } catch (error) {
     console.error("Error in getRoutine:", error);
     res
@@ -130,12 +186,6 @@ export const getRoutineByBudgetRange = async (req, res) => {
       skinType: skinType.toLowerCase(),
     }).populate("steps.products").lean();
 
-    routines.sort((a, b) => {
-      const orderA = STRATEGY_ORDER[a.strategy] || 999;
-      const orderB = STRATEGY_ORDER[b.strategy] || 999;
-      return orderA - orderB;
-    });
-
     if (routines.length === 0) {
       return res.status(404).json({
         message:
@@ -143,7 +193,16 @@ export const getRoutineByBudgetRange = async (req, res) => {
       });
     }
 
-    res.status(200).json(routines);
+    // Get the best morning/night pair
+    const bestPair = groupRoutinesByMorningNight(routines);
+
+    if (!bestPair) {
+      return res.status(404).json({
+        message: "No matching morning/night routine pairs found",
+      });
+    }
+
+    res.status(200).json({ routine: bestPair });
   } catch (error) {
     res
       .status(500)
@@ -186,12 +245,6 @@ export const getRoutineByPrice = async (req, res) => {
       skinType: skinType.toLowerCase(),
     }).populate("steps.products").lean();
 
-    routines.sort((a, b) => {
-      const orderA = STRATEGY_ORDER[a.strategy] || 999;
-      const orderB = STRATEGY_ORDER[b.strategy] || 999;
-      return orderA - orderB;
-    });
-
     if (routines.length === 0) {
       return res.status(404).json({
         message:
@@ -199,7 +252,16 @@ export const getRoutineByPrice = async (req, res) => {
       });
     }
 
-    res.status(200).json(routines);
+    // Get the best morning/night pair
+    const bestPair = groupRoutinesByMorningNight(routines);
+
+    if (!bestPair) {
+      return res.status(404).json({
+        message: "No matching morning/night routine pairs found",
+      });
+    }
+
+    res.status(200).json({ routine: bestPair });
   } catch (error) {
     res
       .status(500)
@@ -227,7 +289,7 @@ export const deleteRoutineById = async (req, res) => {
 
 export const getRoutinesByPriceRange = async (req, res) => {
   try {
-    const { minPrice, maxPrice, skinType, strategy, name } = req.query;
+    const { minPrice, maxPrice, skinType, strategy } = req.query;
 
     if (!skinType) {
       return res
@@ -248,17 +310,14 @@ export const getRoutinesByPriceRange = async (req, res) => {
       return res.status(400).json({ message: "Invalid price values" });
     }
 
+    // Find all routines up to the max budget (we'll check combined price when pairing)
     const query = {
       skinType: skinType.toLowerCase(),
-      totalPrice: { $gte: min, $lte: max },
+      totalPrice: { $lte: max },
     };
 
     if (strategy) {
       query.strategy = strategy;
-    }
-
-    if (name) {
-      query.name = name;
     }
 
     // Get all matching routines and populate products
@@ -270,20 +329,17 @@ export const getRoutinesByPriceRange = async (req, res) => {
       });
     }
 
-    // Sort by avgRank (best quality - higher is better) first, then by totalPrice (highest) second
-    routines.sort((a, b) => {
-      if (a.avgRank !== b.avgRank) {
-        return b.avgRank - a.avgRank; // Higher rank is better
-      }
-      return b.totalPrice - a.totalPrice; // Higher price second
-    });
+    // Get the best morning/night pair within the combined budget
+    const bestPair = groupRoutinesByMorningNight(routines, max);
 
-    // Return top routine with highest rating and highest price
-    const topRoutine = routines[0];
+    if (!bestPair) {
+      return res.status(404).json({
+        message: "No matching morning/night routine pairs found within budget",
+      });
+    }
 
     res.status(200).json({
-      routine: topRoutine,
-      totalMatches: routines.length,
+      routine: bestPair,
     });
   } catch (error) {
     console.error("Error in getRoutinesByPriceRange:", error);
@@ -295,7 +351,7 @@ export const getRoutinesByPriceRange = async (req, res) => {
 
 export const getRoutinesByProductPriceRange = async (req, res) => {
   try {
-    const { minPrice, maxPrice, skinType, strategy, name } = req.query;
+    const { minPrice, maxPrice, skinType, strategy } = req.query;
 
     if (!skinType) {
       return res
@@ -325,10 +381,6 @@ export const getRoutinesByProductPriceRange = async (req, res) => {
       query.strategy = strategy;
     }
 
-    if (name) {
-      query.name = name;
-    }
-
     // Get all routines and populate products
     let routines = await Routine.find(query).populate("steps.products").lean();
 
@@ -355,17 +407,17 @@ export const getRoutinesByProductPriceRange = async (req, res) => {
       });
     }
 
-    // Sort by avgRank (best quality - higher is better) first, then by totalPrice
-    filteredRoutines.sort((a, b) => {
-      if (a.avgRank !== b.avgRank) {
-        return b.avgRank - a.avgRank; // Higher rank is better
-      }
-      return b.totalPrice - a.totalPrice; // Higher price second
-    });
+    // Get the best morning/night pair
+    const bestPair = groupRoutinesByMorningNight(filteredRoutines);
+
+    if (!bestPair) {
+      return res.status(404).json({
+        message: "No matching morning/night routine pairs found",
+      });
+    }
 
     res.status(200).json({
-      routines: filteredRoutines,
-      count: filteredRoutines.length,
+      routine: bestPair,
     });
   } catch (error) {
     console.error("Error in getRoutinesByProductPriceRange:", error);
