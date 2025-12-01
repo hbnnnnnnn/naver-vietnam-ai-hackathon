@@ -108,16 +108,16 @@ const FilterControls = ({
       </div>
 
       {/* Price Slider - Full Width Below */}
-      <div className="mt-6">
+      <div className="mt-5">
         <label className="block text-sm font-medium text-foreground mb-2">
           {priceMode === "total"
             ? "Maximum total price"
             : "Maximum price per product"}
         </label>
-        <div className="space-y-4">
+        <div className="space-y-1">
           <input
             type="range"
-            min={priceMode === "total" ? "500000" : "0"}
+            min={priceMode === "total" ? "2000000" : "100000"}
             max="20000000"
             step="100000"
             value={maxPrice}
@@ -126,7 +126,7 @@ const FilterControls = ({
           />
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">
-              {priceMode === "total" ? "500,000 VND" : "0 VND"}
+              {priceMode === "total" ? "2,000,000 VND" : "100,000 VND"}
             </span>
             <span className="text-lg font-semibold text-primary">
               {formatPrice(maxPrice)}

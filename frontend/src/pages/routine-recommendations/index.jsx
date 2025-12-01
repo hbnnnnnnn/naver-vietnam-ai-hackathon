@@ -261,9 +261,11 @@ const RoutineRecommendations = () => {
       );
       const skinType = userProfile?.skinType?.toLowerCase() || "normal";
 
-      let morningData, nightData;
+      let morningData = null,
+        nightData = null;
 
       if (priceMode === "total") {
+        // Use getRoutinesByPriceRange API (total routine price)
         const filters = {
           skinType: skinType,
           strategy: routineType,
@@ -272,35 +274,20 @@ const RoutineRecommendations = () => {
         };
 
         try {
-          const morningResponse = await ApiService.getRoutinesByPriceRange({
-            ...filters,
-            name: "morning",
-          });
-          morningData = morningResponse?.routine || null;
+          const response = await ApiService.getRoutinesByPriceRange(filters);
+          if (response?.routine) {
+            morningData = response.routine.morning || null;
+            nightData = response.routine.night || null;
+          }
         } catch (err) {
           if (err.message && err.message.includes("404")) {
             morningData = null;
-          } else {
-            throw err;
-          }
-        }
-
-        // Fetch night routine
-        try {
-          const nightResponse = await ApiService.getRoutinesByPriceRange({
-            ...filters,
-            name: "night",
-          });
-          nightData = nightResponse?.routine || null;
-        } catch (err) {
-          if (err.message && err.message.includes("404")) {
             nightData = null;
           } else {
             throw err;
           }
         }
       } else {
-        // Use getRoutinesByProductPriceRange API (individual product price)
         const filters = {
           skinType: skinType,
           strategy: routineType,
@@ -309,31 +296,14 @@ const RoutineRecommendations = () => {
         };
 
         try {
-          const morningResponse = await ApiService.getProductsByPriceRange({
-            ...filters,
-            name: "morning",
-          });
-          morningData =
-            morningResponse?.routines?.find((r) => r.name === "morning") ||
-            null;
+          const response = await ApiService.getProductsByPriceRange(filters);
+          if (response?.routine) {
+            morningData = response.routine.morning || null;
+            nightData = response.routine.night || null;
+          }
         } catch (err) {
           if (err.message && err.message.includes("404")) {
             morningData = null;
-          } else {
-            throw err;
-          }
-        }
-
-        // Fetch night routine
-        try {
-          const nightResponse = await ApiService.getProductsByPriceRange({
-            ...filters,
-            name: "night",
-          });
-          nightData =
-            nightResponse?.routines?.find((r) => r.name === "night") || null;
-        } catch (err) {
-          if (err.message && err.message.includes("404")) {
             nightData = null;
           } else {
             throw err;
@@ -821,7 +791,7 @@ const RoutineRecommendations = () => {
           )}
 
           {/* Page Header */}
-          <div className="text-center mb-0">
+          <div className="text-center mb-3">
             <div className="flex items-center justify-center space-x-3 mb-4">
               <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glass">
                 <Icon name="Calendar" size={24} color="white" />
@@ -833,7 +803,7 @@ const RoutineRecommendations = () => {
                       savedRoutineData?.name ||
                       "Skincare Routine"
                     }`
-                  : "Skincare Routine Recommendations"}
+                  : "Routine Recommendations"}
               </h1>
             </div>
             <p className="text-lg text-muted-foreground font-caption max-w-2xl mx-auto">
@@ -845,7 +815,7 @@ const RoutineRecommendations = () => {
 
           {/* Filter Controls */}
           {!isViewingFromProfile && (
-            <div className="mt-2">
+            <div className="mt-0">
               <FilterControls
                 routineType={routineType}
                 setRoutineType={setRoutineType}
@@ -867,7 +837,7 @@ const RoutineRecommendations = () => {
                 size="lg"
                 onClick={handleAnalysisStart}
                 disabled={isAnalyzing}
-                className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-0"
+                className="mb-1 bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-base font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-0"
                 iconName="Camera"
                 iconPosition="left"
                 iconSize={20}
