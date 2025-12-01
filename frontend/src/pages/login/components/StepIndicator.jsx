@@ -4,7 +4,7 @@ const StepIndicator = ({ step }) => {
   return (
     <div className="flex items-center justify-between mb-2">
       <div>
-        <p className="text-sm text-muted-foreground">Bước {step}/3</p>
+        <p className="text-sm text-muted-foreground">Step {step}/3</p>
       </div>
 
       <div className="flex items-center gap-1 w-24">

@@ -43,15 +43,23 @@ const ProfileHeader = ({ userProfile, onUpdateProfile }) => {
     try {
       const payload = {
         username: userProfile?.username,
-        name: editedProfile?.name || userProfile?.name,
-        skinType: editedProfile?.skinType || userProfile?.skinType || "normal",
+        name: editedProfile?.name,
+        skinType: editedProfile?.skinType,
         concerns: Array.isArray(editedProfile?.concerns)
           ? editedProfile.concerns
           : [],
         avatar: editedProfile?.avatar || userProfile?.avatar,
       };
       await ApiService.createOrUpdateUser(payload);
-      onUpdateProfile(payload);
+      const updatedUser = await ApiService.getUserByUsername(payload.username);
+      onUpdateProfile({
+        username: updatedUser.user.username,
+        name: updatedUser.user.name,
+        avatar: updatedUser.user.avatar || userProfile?.avatar,
+        skinType: updatedUser.user.skinType,
+        concerns: updatedUser.user.concerns,
+        joinDate: updatedUser.user.createdAt,
+      });
       setIsEditing(false);
     } catch (error) {
       alert("Save profile failed! " + (error?.message || ""));
@@ -70,17 +78,17 @@ const ProfileHeader = ({ userProfile, onUpdateProfile }) => {
 
   return (
     <div
-      className="glass-card p-6 mb-6 rounded-2xl"
+      className="glass-card p-4 sm:p-6 mb-6 rounded-2xl"
       style={{
         backgroundImage:
           "linear-gradient(135deg, rgba(255,144,187,0.15) 0%, rgba(138,204,213,0.15) 100%)",
         marginTop: "-70px",
       }}
     >
-      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
         {/* Profile Avatar */}
-        <div className="relative">
-          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white/20 shadow-glass">
+        <div className="relative flex justify-center sm:block w-full sm:w-auto mb-4 sm:mb-0">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white/20 shadow-glass mx-auto sm:mx-0">
             <Image
               src={userProfile?.avatar || defaultAvatar}
               alt={userProfile?.avatarAlt || "Default Avatar"}
@@ -90,7 +98,7 @@ const ProfileHeader = ({ userProfile, onUpdateProfile }) => {
         </div>
 
         {/* Profile Information */}
-        <div className="flex-1 w-full lg:w-auto">
+        <div className="flex-1 w-full sm:w-auto">
           {isEditing ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -227,11 +235,7 @@ const ProfileHeader = ({ userProfile, onUpdateProfile }) => {
                             year: "numeric",
                           }
                         )
-                      : new Date().toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
+                      : ""}
                   </p>
                 </div>
               </div>

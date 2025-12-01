@@ -13,19 +13,19 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
   // Helper function to format date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
   // Helper function to format time
   const formatTime = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -47,9 +47,11 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
     if (selectedItems.length === 0) return;
 
     try {
-      const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+      const userProfile = JSON.parse(
+        localStorage.getItem("userProfile") || "{}"
+      );
       if (!userProfile.id) {
-        console.warn('No user ID found for delete operation');
+        console.warn("No user ID found for delete operation");
         return;
       }
 
@@ -58,25 +60,30 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
         onHistoryUpdate(); // Refresh the history in parent component
       }
       setSelectedItems([]);
-      console.log('Deleted items:', selectedItems);
+      console.log("Deleted items:", selectedItems);
     } catch (error) {
-      console.error('Failed to delete scan items:', error);
+      console.error("Failed to delete scan items:", error);
     }
   };
 
   const handleClearAll = async () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa tất cả lịch sử quét?")) {
       try {
-        const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+        const userProfile = JSON.parse(
+          localStorage.getItem("userProfile") || "{}"
+        );
         if (!userProfile.id) {
-          console.warn('No user ID found for clear operation');
+          console.warn("No user ID found for clear operation");
           return;
         }
 
         // Delete all scan history by getting all scan IDs
-        const allScanIds = scanHistory.map(scan => scan.id || scan._id);
+        const allScanIds = scanHistory.map((scan) => scan.id || scan._id);
         if (allScanIds.length > 0) {
-          await ApiService.deleteMultipleScanHistory(userProfile.id, allScanIds);
+          await ApiService.deleteMultipleScanHistory(
+            userProfile.id,
+            allScanIds
+          );
         }
 
         if (onHistoryUpdate) {
@@ -84,7 +91,7 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
         }
         setSelectedItems([]);
       } catch (error) {
-        console.error('Failed to clear all scan history:', error);
+        console.error("Failed to clear all scan history:", error);
       }
     }
   };
@@ -134,8 +141,8 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
   return (
     <div className="rounded-3xl space-y-4">
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <Button
             variant="ghost"
             size="sm"
@@ -146,6 +153,7 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
                 : "Square"
             }
             iconPosition="left"
+            className="text-sm"
           >
             {selectedItems?.length === scanHistory?.length
               ? "Deselect all"
@@ -153,14 +161,14 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground font-caption">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-sm text-muted-foreground font-caption whitespace-nowrap">
             Sort by:
           </span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e?.target?.value)}
-            className="bg-background border border-border rounded px-2 py-1 text-sm font-caption focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="bg-background border border-border rounded px-2 py-1 text-sm font-caption focus:outline-none focus:ring-2 focus:ring-primary/20 flex-1 sm:flex-initial"
           >
             <option value="date">Date</option>
             <option value="safety">Safety Level</option>
@@ -173,7 +181,8 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
       {selectedItems?.length > 0 && (
         <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg mb-4">
           <span className="text-sm font-caption text-foreground">
-            Selected {selectedItems?.length} scan{selectedItems?.length > 1 ? "s" : ""}
+            Selected {selectedItems?.length} scan
+            {selectedItems?.length > 1 ? "s" : ""}
           </span>
           <Button
             variant="destructive"
@@ -213,16 +222,17 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
           sortedHistory?.map((item) => (
             <div
               key={item?._id || item?.id}
-              className={`rounded-2xl glass-card p-4 transition-smooth hover:shadow-glow ${selectedItems?.includes(item?._id || item?.id)
-                ? "ring-2 ring-primary/50"
-                : ""
-                }`}
+              className={`rounded-2xl glass-card p-3 sm:p-4 transition-smooth hover:shadow-glow ${
+                selectedItems?.includes(item?._id || item?.id)
+                  ? "ring-2 ring-primary/50"
+                  : ""
+              }`}
             >
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-3 sm:gap-4">
                 {/* Checkbox */}
                 <button
                   onClick={() => handleSelectItem(item?._id || item?.id)}
-                  className="mt-1 transition-smooth hover:scale-110"
+                  className="mt-1 transition-smooth hover:scale-110 flex-shrink-0"
                 >
                   <Icon
                     name={
@@ -240,9 +250,12 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
                 </button>
 
                 {/* Product Image */}
-                <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
                   <Image
-                    src={item?.productImages?.front || '/assets/images/placeholder.png'}
+                    src={
+                      item?.productImages?.front ||
+                      "/assets/images/placeholder.png"
+                    }
                     alt={`${item?.productName} product image`}
                     className="w-full h-full object-cover"
                   />
@@ -250,38 +263,52 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
 
                 {/* Product Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-heading font-semibold text-foreground truncate">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-heading font-semibold text-foreground truncate text-sm sm:text-base">
                         {item?.productName}
                       </h4>
                       {item?.productBrand && (
-                        <p className="text-sm text-muted-foreground font-caption">
+                        <p className="text-xs sm:text-sm text-muted-foreground font-caption truncate">
                           {item?.productBrand}
                         </p>
                       )}
                     </div>
 
                     <div
-                      className={`px-2 py-1 rounded-full text-xs font-caption font-medium ${getSafetyBg(
+                      className={`px-2 py-1 rounded-full text-xs font-caption font-medium whitespace-nowrap flex-shrink-0 ${getSafetyBg(
                         item?.safetyLevel
                       )} ${getSafetyColor(item?.safetyLevel)}`}
                     >
                       {item?.safetyLevel === "safe" && "Safe"}
-                      {(item?.safetyLevel === "moderate" || item?.safetyLevel === "neutral") && "Moderate"}
-                      {(item?.safetyLevel === "caution" || item?.safetyLevel === "risky") && "Caution"}
+                      {(item?.safetyLevel === "moderate" ||
+                        item?.safetyLevel === "neutral") &&
+                        "Moderate"}
+                      {(item?.safetyLevel === "caution" ||
+                        item?.safetyLevel === "risky") &&
+                        "Caution"}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground font-caption">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground font-caption">
                       <div className="flex items-center gap-1">
                         <Icon name="Calendar" size={14} />
-                        <span>{formatDate(item?.createdAt || item?.scanDate)}</span>
+                        <span className="hidden sm:inline">
+                          {formatDate(item?.createdAt || item?.scanDate)}
+                        </span>
+                        <span className="sm:hidden">
+                          {formatDate(item?.createdAt || item?.scanDate)
+                            .split("/")
+                            .slice(0, 2)
+                            .join("/")}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Icon name="Clock" size={14} />
-                        <span>{formatTime(item?.createdAt || item?.scanDate)}</span>
+                        <span>
+                          {formatTime(item?.createdAt || item?.scanDate)}
+                        </span>
                       </div>
                     </div>
 
@@ -294,20 +321,21 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
                               analysisResults: item?.fullAnalysis,
                               uploadedImages: {
                                 front: item?.productImages?.front || null,
-                                back: item?.productImages?.back || null
+                                back: item?.productImages?.back || null,
                               },
                               showResults: true,
                               fromHistory: true,
-                              skipUpload: true // Add flag to bypass upload form
+                              skipUpload: true,
                             },
-                            replace: true // Replace current history entry
+                            replace: true,
                           });
                         }}
                         iconName="Eye"
                         iconPosition="left"
-                        className="bg-ring rounded-3xl"
+                        className="bg-ring rounded-3xl text-xs sm:text-sm"
                       >
-                        View details
+                        <span className="hidden sm:inline">View details</span>
+                        <span className="sm:hidden">View</span>
                       </Button>
                     </div>
                   </div>
@@ -317,7 +345,7 @@ const ScanHistoryTab = ({ scanHistory, onHistoryUpdate }) => {
           ))
         )}
       </div>
-    </div >
+    </div>
   );
 };
 

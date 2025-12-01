@@ -12,25 +12,25 @@ const Header = () => {
       label: "Home",
       path: "/",
       icon: "Home",
-      tooltip: "Trang chủ và giới thiệu platform",
+      tooltip: "Home and platform introduction",
     },
     {
       label: "Product Analysis",
       path: "/product",
       icon: "Camera",
-      tooltip: "Chụp ảnh và phân tích thành phần sản phẩm",
+      tooltip: "Take a photo and analyze product ingredients",
     },
     {
       label: "Routine Recommendations",
       path: "/routine",
       icon: "Calendar",
-      tooltip: "Nhận gợi ý quy trình chăm sóc da cá nhân",
+      tooltip: "Get personalized skincare routine suggestions",
     },
     {
       label: "AI Chat",
       path: "/chatbot",
       icon: "MessageCircle",
-      tooltip: "Trò chuyện với chuyên gia AI về skincare",
+      tooltip: "Chat with AI skincare expert",
     },
   ];
 
@@ -135,7 +135,7 @@ const Header = () => {
           />
 
           {/* Mobile Menu Panel */}
-          <div className="fixed top-0 right-0 h-full w-80 max-w-[85vw] glass-card z-50 md:hidden transform transition-transform duration-300">
+          <div className="bg-white/50 fixed top-0 right-0 h-full w-80 max-w-[85vw] glass-card z-60 md:hidden transform transition-transform duration-300">
             <div className="flex flex-col h-full">
               {/* Mobile Menu Header */}
               <div className="flex items-center justify-between p-4 border-b border-white/20">

@@ -310,7 +310,7 @@ const UserProfileDashboard = () => {
               </div>
             </div>
           ) : (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
               <div className="relative z-40" style={{ overflow: "visible" }}>
                 <ProfileHeader
                   userProfile={userProfile}
@@ -319,14 +319,14 @@ const UserProfileDashboard = () => {
               </div>
 
               {/* Quick Actions */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                   <Button
                     variant="default"
                     onClick={() => navigate("/product")}
                     iconName="Scan"
                     iconPosition="left"
-                    className="rounded-3xl shadow-glow animate-glass-float"
+                    className="rounded-3xl shadow-glow animate-glass-float w-full sm:w-auto"
                   >
                     Scan new product
                   </Button>
@@ -335,7 +335,7 @@ const UserProfileDashboard = () => {
                     onClick={() => navigate("/routine")}
                     iconName="MessageCircle"
                     iconPosition="left"
-                    className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black animate-glass-float"
+                    className="rounded-3xl border hover:bg-[rgba(255,144,187,0.2)] border-black animate-glass-float w-full sm:w-auto"
                   >
                     Recommend routine
                   </Button>
@@ -343,20 +343,20 @@ const UserProfileDashboard = () => {
               </div>
 
               {/* Tabs Navigation */}
-              <div className="glass-card mb-6 rounded-2xl">
-                <div className="flex items-center border-b border-white/10">
+              <div className="glass-card mb-6 rounded-2xl overflow-hidden">
+                <div className="flex items-center border-b border-white/10 overflow-x-auto scrollbar-hide">
                   {tabs?.map((tab) => (
                     <button
                       key={tab?.id}
                       onClick={() => setActiveTab(tab?.id)}
-                      className={`flex items-center gap-2 px-6 py-4 font-caption font-medium transition-smooth hover:bg-white/5 ${
+                      className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 font-caption font-medium transition-smooth hover:bg-white/5 whitespace-nowrap flex-shrink-0 ${
                         activeTab === tab?.id
                           ? "text-primary border-b-2 border-primary bg-primary/5"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       <Icon name={tab?.icon} size={18} />
-                      <span>{tab?.label}</span>
+                      <span className="text-sm sm:text-base">{tab?.label}</span>
                       {tab?.count !== null && (
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -373,15 +373,15 @@ const UserProfileDashboard = () => {
                 </div>
 
                 {/* Tab Content */}
-                <div className="p-6">{renderTabContent()}</div>
+                <div className="p-4 sm:p-6">{renderTabContent()}</div>
               </div>
 
               {/* Logout Button */}
-              <div className="flex justify-end mb-4">
+              <div className="flex justify-center sm:justify-end mb-4">
                 <Button
                   variant="outline"
                   onClick={handleLogout}
-                  className="rounded-3xl text-red-500 border-red-500 hover:bg-[rgba(255,144,187,0.2)]"
+                  className="rounded-3xl text-red-500 border-red-500 hover:bg-[rgba(255,144,187,0.2)] w-full sm:w-auto"
                 >
                   Log out
                 </Button>
