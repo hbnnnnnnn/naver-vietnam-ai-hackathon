@@ -29,6 +29,10 @@ const groupRoutinesByMorningNight = (routines, maxBudget = null) => {
           continue;
         }
 
+        // Calculate combined product count if available
+        const combinedProductCount =
+          (morning.totalProductsInRange || 0) + (night.totalProductsInRange || 0);
+
         pairs.push({
           strategy: morning.strategy,
           priceBracket: morning.priceBracket,
@@ -36,6 +40,7 @@ const groupRoutinesByMorningNight = (routines, maxBudget = null) => {
           night: night,
           combinedPrice: combinedPrice,
           combinedRank: (morning.avgRank + night.avgRank) / 2,
+          combinedProductCount: combinedProductCount,
         });
       }
     }
@@ -43,11 +48,24 @@ const groupRoutinesByMorningNight = (routines, maxBudget = null) => {
 
   if (pairs.length === 0) return null;
 
-  // Sort pairs by combined price (highest first), then by combined rank (highest second)
+  // Sort pairs prioritizing:
+  // 1. Most product options (if totalProductsInRange is available)
+  // 2. Higher combined price (better quality)
+  // 3. Higher rank (better ranking)
   pairs.sort((a, b) => {
+    // Prioritize product count if filtering by price range was applied
+    if (a.combinedProductCount > 0 || b.combinedProductCount > 0) {
+      if (a.combinedProductCount !== b.combinedProductCount) {
+        return b.combinedProductCount - a.combinedProductCount; // More products is better
+      }
+    }
+
+    // Then by price
     if (a.combinedPrice !== b.combinedPrice) {
       return b.combinedPrice - a.combinedPrice; // Higher price is better
     }
+
+    // Finally by rank
     return b.combinedRank - a.combinedRank; // Higher rank is better
   });
 
@@ -60,6 +78,7 @@ const groupRoutinesByMorningNight = (routines, maxBudget = null) => {
     night: bestPair.night,
     combinedPrice: bestPair.combinedPrice,
     combinedRank: bestPair.combinedRank,
+    combinedProductCount: bestPair.combinedProductCount,
   };
 };
 
@@ -390,22 +409,44 @@ export const getRoutinesByProductPriceRange = async (req, res) => {
       });
     }
 
-    // Filter routines to only include those where each step has at least one product within the price range
-    const filteredRoutines = routines.filter((routine) => {
-      // Check if each step has at least one product within the price range
-      return routine.steps.every((step) => {
-        return step.products.some((product) => {
-          return product.price >= min && product.price <= max;
-        });
+    // Filter products within each routine to only include those in the price range
+    // AND only keep routines where each step has at least one product in range
+    const filteredRoutines = routines
+      .map((routine) => {
+        // Filter products in each step
+        const filteredSteps = routine.steps.map((step) => ({
+          ...step,
+          products: step.products.filter(
+            (product) => product.price >= min && product.price <= max
+          ),
+        }));
+
+        // Count total products after filtering
+        const totalProductsInRange = filteredSteps.reduce(
+          (sum, step) => sum + step.products.length,
+          0
+        );
+
+        return {
+          ...routine,
+          steps: filteredSteps,
+          totalProductsInRange,
+        };
+      })
+      .filter((routine) => {
+        // Only keep routines where each step has at least one product
+        return routine.steps.every((step) => step.products.length > 0);
       });
-    });
 
     if (filteredRoutines.length === 0) {
       return res.status(404).json({
         message:
-          "No routines found where all products are within the specified price range",
+          "No routines found where each step has at least one product within the specified price range",
       });
     }
+
+    // Sort by total products in range (more options = better)
+    filteredRoutines.sort((a, b) => b.totalProductsInRange - a.totalProductsInRange);
 
     // Get the best morning/night pair
     const bestPair = groupRoutinesByMorningNight(filteredRoutines);
