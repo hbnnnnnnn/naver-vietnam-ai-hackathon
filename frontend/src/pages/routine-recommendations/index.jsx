@@ -821,8 +821,8 @@ const RoutineRecommendations = () => {
           )}
 
           {/* Page Header */}
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center space-x-3 mb-4">
+          <div className="text-center mb-0">
+            <div className="flex items-center justify-center space-x-3 mb-0">
               <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glass">
                 <Icon name="Calendar" size={24} color="white" />
               </div>
@@ -845,7 +845,7 @@ const RoutineRecommendations = () => {
 
           {/* Filter Controls */}
           {!isViewingFromProfile && (
-            <div className="mt-14">
+            <div className="mt-0">
               <FilterControls
                 routineType={routineType}
                 setRoutineType={setRoutineType}
@@ -861,13 +861,13 @@ const RoutineRecommendations = () => {
 
           {/* CTA Button */}
           {!isViewingFromProfile && (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-10">
               <Button
                 variant="default"
                 size="lg"
                 onClick={handleAnalysisStart}
                 disabled={isAnalyzing}
-                className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-6"
+                className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-0"
                 iconName="Camera"
                 iconPosition="left"
                 iconSize={20}

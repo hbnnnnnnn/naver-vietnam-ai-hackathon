@@ -79,7 +79,7 @@ const FilterControls = ({
 
   return (
     <div className="glass-card p-6 mb-8 rounded-3xl">
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-4">
         {/* First Column: Routine Type */}
         <div className="flex-1">
           <Select
@@ -114,11 +114,6 @@ const FilterControls = ({
             ? "Maximum total price"
             : "Maximum price per product"}
         </label>
-        <p className="text-xs text-muted-foreground mb-3">
-          {priceMode === "total"
-            ? "Drag to set maximum budget for entire routine (minimum: 500,000 VND)"
-            : "Drag to set maximum price for each product (minimum: 0 VND)"}
-        </p>
         <div className="space-y-4">
           <input
             type="range"
