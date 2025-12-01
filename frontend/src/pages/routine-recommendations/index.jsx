@@ -106,6 +106,8 @@ const RoutineRecommendations = () => {
     if (viewRoutineData) {
       try {
         const routineData = JSON.parse(viewRoutineData);
+        console.log("Loading saved routine:", routineData);
+
         setSavedRoutineData(routineData);
         setIsViewingFromProfile(true);
         setShowResults(true);
@@ -114,12 +116,29 @@ const RoutineRecommendations = () => {
         setRoutineType(routineData.routineType || "minimal");
         setPriceRange(routineData.priceRange || "budget-friendly");
 
-        // Set routines data
+        // Set routines data - transform from saved format to display format
+        // SavedRoutine structure: { morningRoutine: { steps: [...] }, eveningRoutine: { steps: [...] } }
         if (routineData.morningRoutine) {
-          setMorningRoutine(routineData.morningRoutine);
+          console.log(
+            "Morning routine from saved data:",
+            routineData.morningRoutine
+          );
+          // Convert saved routine steps to the format expected by transformRoutineSteps
+          const morningRoutineData = {
+            steps: routineData.morningRoutine.steps || [],
+          };
+          setMorningRoutine(morningRoutineData);
         }
+
         if (routineData.eveningRoutine) {
-          setNightRoutine(routineData.eveningRoutine);
+          console.log(
+            "Evening routine from saved data:",
+            routineData.eveningRoutine
+          );
+          const eveningRoutineData = {
+            steps: routineData.eveningRoutine.steps || [],
+          };
+          setNightRoutine(eveningRoutineData);
         }
 
         // Fetch UV index when viewing from profile
@@ -209,7 +228,10 @@ const RoutineRecommendations = () => {
         userId = createResponse.user._id;
       }
 
-      // Save complete routine to database
+      // Save complete routine to database with full product details
+      console.log("Saving routine - Morning steps:", morningSteps);
+      console.log("Saving routine - Night steps:", nightSteps);
+
       const completeRoutineData = {
         userId,
         routineName,
@@ -219,12 +241,43 @@ const RoutineRecommendations = () => {
         uvIndex: uvIndex || null,
         location: "Ho Chi Minh City",
         morningRoutine: {
-          steps: morningSteps || [],
+          steps: morningSteps.map((step) => ({
+            id: step.id,
+            category: step.category,
+            description: step.description,
+            timing: step.timing,
+            purpose: step.purpose,
+            rank: step.rank || 0,
+            products: (step.products || []).map((product) => ({
+              // Save all product fields to preserve complete data
+              ...product,
+              _id: product._id || product.id,
+              id: product.id || product._id,
+            })),
+          })),
         },
         eveningRoutine: {
-          steps: nightSteps || [],
+          steps: nightSteps.map((step) => ({
+            id: step.id,
+            category: step.category,
+            description: step.description,
+            timing: step.timing,
+            purpose: step.purpose,
+            rank: step.rank || 0,
+            products: (step.products || []).map((product) => ({
+              // Save all product fields to preserve complete data
+              ...product,
+              _id: product._id || product.id,
+              id: product.id || product._id,
+            })),
+          })),
         },
       };
+
+      console.log(
+        "Complete routine data to save:",
+        JSON.stringify(completeRoutineData, null, 2)
+      );
 
       await ApiService.saveRoutine(completeRoutineData);
 
@@ -323,10 +376,11 @@ const RoutineRecommendations = () => {
 
   // Handle filter changes
   useEffect(() => {
-    if (showResults) {
+    // Only fetch routines if not viewing from profile (saved routine)
+    if (showResults && !isViewingFromProfile) {
       fetchRoutines();
     }
-  }, [routineType, priceMode, maxPrice, showResults]);
+  }, [routineType, priceMode, maxPrice, showResults, isViewingFromProfile]);
 
   // Mock routine data
   const routineData = {
@@ -724,32 +778,38 @@ const RoutineRecommendations = () => {
         "Night Mask": "1-2 minutes",
       };
 
+      // Handle both backend format (step.name) and saved format (step.category)
+      const stepName = step.name || step.category || "Step";
       const description =
-        step.description || descriptionMap[step.name] || "Skincare treatment";
-      const timing = timingMap[step.name] || "1-2 minutes";
+        step.description || descriptionMap[stepName] || "Skincare treatment";
+      const timing = step.timing || timingMap[stepName] || "1-2 minutes";
 
       // Convert products and add rating, image
       const productsWithRating = products.map((product) => {
         return {
           ...product,
-          rating: product.rank || 0,
+          id: product._id || product.id,
+          rating: product.rating || product.rank || 0,
           image:
+            product.image ||
             product.thumbnail_url ||
             "https://png.pngtree.com/thumb_back/fh260/background/20210207/pngtree-simple-gray-solid-color-background-image_557027.jpg",
-          imageAlt: `${product.brand || "Unknown Brand"} - ${
-            product.name || "Unknown Product"
-          }`,
+          imageAlt:
+            product.imageAlt ||
+            `${product.brand || "Unknown Brand"} - ${
+              product.name || "Unknown Product"
+            }`,
         };
       });
 
       return {
-        id: index + 1,
-        category: step.name || "Step",
+        id: step.id || index + 1,
+        category: step.category || stepName,
         description: description,
         timing: timing,
-        purpose: step.name || "Treatment",
+        purpose: step.purpose || stepName || "Treatment",
         products: productsWithRating,
-        rank: firstProduct?.rank || 0,
+        rank: step.rank || firstProduct?.rank || 0,
       };
     });
   };

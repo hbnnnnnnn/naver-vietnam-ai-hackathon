@@ -12,15 +12,25 @@ const routineStepSchema = new mongoose.Schema(
         _id: { type: String },
         name: { type: String },
         brand: { type: String },
+        price: { type: Number },
         rating: { type: Number },
         image: { type: String },
         imageAlt: { type: String },
         rank: { type: Number },
+        thumbnail_url: { type: String },
+        category: { type: String },
+        ingredients: { type: mongoose.Schema.Types.Mixed }, // Allow any structure for ingredients
+        skinType: [{ type: String }],
+        concerns: [{ type: String }],
+        benefits: [{ type: String }],
+        description: { type: String },
+        usage: { type: String },
+        // Allow any other fields from Product model
       },
     ],
     rank: { type: Number, default: 0 },
   },
-  { _id: false }
+  { _id: false, strict: false } // strict: false allows additional fields
 );
 
 const routineSchema = new mongoose.Schema(
