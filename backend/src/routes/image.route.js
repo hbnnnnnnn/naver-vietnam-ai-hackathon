@@ -6,19 +6,10 @@ const router = express.Router();
 const memoryCache = new Map();
 const CACHE_EXPIRY_DAYS = 7;
 
-// Get cached image from database - ALWAYS prioritize Google when API is available
+// Get cached image from database - Check DB first, only call API if not found
 const getCachedImageFromDB = async (query) => {
   try {
-    const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-    const SEARCH_ENGINE_ID = process.env.GOOGLE_CSE_ID;
-    const hasGoogleAPI = !!(GOOGLE_API_KEY && SEARCH_ENGINE_ID);
-
-    // If Google API is available, delete any Pexels cache first
-    if (hasGoogleAPI) {
-      await ProductImage.deleteMany({ query, source: "pexels" });
-    }
-
-    // First try to get Google images (highest priority)
+    // Always try to get Google images from DB first (highest priority)
     const googleCached = await ProductImage.findOne({
       query,
       source: "google",
@@ -33,33 +24,10 @@ const getCachedImageFromDB = async (query) => {
         timestamp: googleCached.createdAt,
         source: "google",
       });
-      return googleCached.imageUrl;
+      return { imageUrl: googleCached.imageUrl, source: "google" };
     }
 
-    // If no Google cache found but Google API is available, force fresh search
-    if (hasGoogleAPI) {
-      console.log("No Google cache - will fetch from Google API for:", query);
-      return null; // Force fresh Google search
-    }
-
-    // No Google API available, try Pexels fallback
-    const pexelsCached = await ProductImage.findOne({
-      query,
-      source: "pexels",
-      expiresAt: { $gt: new Date() },
-    });
-
-    if (pexelsCached) {
-      console.log("Database cache HIT (Pexels - no Google API) for:", query);
-      memoryCache.set(query, {
-        imageUrl: pexelsCached.imageUrl,
-        timestamp: pexelsCached.createdAt,
-        source: "pexels",
-      });
-      return pexelsCached.imageUrl;
-    }
-
-    console.log("Database cache MISS for:", query);
+    console.log("Database cache MISS (Google) for:", query);
     return null;
   } catch (error) {
     console.error("Error reading from database cache:", error);
@@ -67,16 +35,13 @@ const getCachedImageFromDB = async (query) => {
   }
 };
 
-// Save image to database cache
+// Save image to database cache - ONLY save Google images, NOT Pexels
 const saveCachedImageToDB = async (query, imageUrl, source = "google") => {
   try {
-    // If we're saving a Google image, remove any existing Pexels cache for this query
-    if (source === "google") {
-      await ProductImage.deleteMany({ query, source: "pexels" });
-      console.log(
-        "Removed Pexels cache for query (replaced with Google):",
-        query
-      );
+    // Only save Google images to database
+    if (source !== "google") {
+      console.log(`Skipping database save for ${source} image:`, query);
+      return;
     }
 
     const expiresAt = new Date();
@@ -101,20 +66,8 @@ const saveCachedImageToDB = async (query, imageUrl, source = "google") => {
     console.log(`Saved to database cache (${source}):`, query);
   } catch (error) {
     if (error.code === 11000) {
-      // Duplicate key error
-      // Update existing record if it's from a lower priority source
-      try {
-        const existing = await ProductImage.findOne({ query });
-        if (existing && existing.source !== "google" && source === "google") {
-          // Replace Pexels with Google
-          await ProductImage.deleteOne({ query });
-          await saveCachedImageToDB(query, imageUrl, source);
-        } else {
-          console.log("Image already cached for query:", query);
-        }
-      } catch (updateError) {
-        console.error("Error updating cache:", updateError);
-      }
+      // Duplicate key error - image already exists
+      console.log("Image already cached for query:", query);
     } else {
       console.error("Error saving to database cache:", error);
     }
@@ -137,101 +90,83 @@ router.get("/product-image", async (req, res) => {
     const SEARCH_ENGINE_ID = process.env.GOOGLE_CSE_ID;
     const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 
-    console.log(
-      "Google API available:",
-      !!(GOOGLE_API_KEY && SEARCH_ENGINE_ID)
-    );
+    const hasGoogleAPI = !!(GOOGLE_API_KEY && SEARCH_ENGINE_ID);
+    console.log("Google API available:", hasGoogleAPI);
 
-    // If Google API is available, skip cache and go directly to Google
-    if (GOOGLE_API_KEY && SEARCH_ENGINE_ID) {
-      console.log("Using Google API for fresh search:", q);
-      // Skip all cache checks and go directly to Google search
-    } else {
-      console.log("No Google API - checking cache");
-
-      // Check memory cache first
-      if (memoryCache.has(q)) {
-        const cached = memoryCache.get(q);
-        const expiryTime = CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
-        if (Date.now() - new Date(cached.timestamp).getTime() < expiryTime) {
-          console.log("Memory cache HIT for:", q);
-          return res.json({ imageUrl: cached.imageUrl });
-        } else {
-          memoryCache.delete(q);
-        }
-      }
-
-      // Check database cache
-      const cachedImageUrl = await getCachedImageFromDB(q);
-      if (cachedImageUrl) {
-        return res.json({ imageUrl: cachedImageUrl });
-      }
-    }
-
-    console.log("Searching external APIs for:", q);
-
-    console.log("API Key exists:", !!GOOGLE_API_KEY);
-    console.log("Search Engine ID exists:", !!SEARCH_ENGINE_ID);
-    console.log("Pexels API Key exists:", !!PEXELS_API_KEY);
-
-    if (!GOOGLE_API_KEY || !SEARCH_ENGINE_ID) {
-      console.log("Missing Google API credentials - trying Pexels fallback");
-      if (PEXELS_API_KEY) {
-        return await searchPexels(q, res);
+    // STEP 1: Check memory cache first (fastest)
+    if (memoryCache.has(q)) {
+      const cached = memoryCache.get(q);
+      const expiryTime = CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+      if (Date.now() - new Date(cached.timestamp).getTime() < expiryTime) {
+        console.log(`Memory cache HIT (${cached.source}) for:`, q);
+        return res.json({ imageUrl: cached.imageUrl });
       } else {
-        console.log("No fallback API available");
-        return res.json({ imageUrl: null });
+        memoryCache.delete(q);
       }
     }
 
-    const searchQuery = `${q} -before -video -person`;
+    // STEP 2: Check database cache (only Google images saved here)
+    const cachedResult = await getCachedImageFromDB(q);
+    if (cachedResult) {
+      console.log(`Returning cached Google image for:`, q);
+      return res.json({ imageUrl: cachedResult.imageUrl });
+    }
 
-    // Try multiple search strategies if first one fails
-    const searchVariations = [
-      searchQuery,
-      `${q} skincare product -video`,
-      `${q} cosmetic -person`,
-      `${q.split(" ").slice(0, 2).join(" ")} product`, // Just brand + first word
-      `${q.split(" ")[0]} skincare`, // Just brand + skincare
-      `cosmetic product ${q.split(" ")[0]}`, // Generic + brand
-    ];
+    // STEP 3: No cache found - fetch from external APIs
+    console.log("Fetching from external APIs for:", q);
 
     let imageUrl = null;
+    let imageSource = null;
 
-    for (let i = 0; i < searchVariations.length && !imageUrl; i++) {
-      const currentQuery = searchVariations[i];
-      const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${SEARCH_ENGINE_ID}&q=${encodeURIComponent(
-        currentQuery
-      )}&searchType=image&num=1&imgSize=medium&imgType=photo&safe=active`;
+    // Try Google API first if available
+    if (hasGoogleAPI) {
+      console.log("Trying Google Custom Search API...");
+      const searchQuery = `${q} -before -video -person`;
 
-      console.log(`Trying search variation ${i + 1}: "${currentQuery}"`);
+      // Try multiple search strategies
+      const searchVariations = [
+        searchQuery,
+        `${q} skincare product -video`,
+        `${q} cosmetic -person`,
+        `${q.split(" ").slice(0, 2).join(" ")} product`,
+        `${q.split(" ")[0]} skincare`,
+        `cosmetic product ${q.split(" ")[0]}`,
+      ];
 
-      try {
-        const fetch = (await import("node-fetch")).default;
-        const response = await fetch(url);
-        const data = await response.json();
+      for (let i = 0; i < searchVariations.length && !imageUrl; i++) {
+        const currentQuery = searchVariations[i];
+        const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${SEARCH_ENGINE_ID}&q=${encodeURIComponent(
+          currentQuery
+        )}&searchType=image&num=1&imgSize=medium&imgType=photo&safe=active`;
 
-        console.log(`Variation ${i + 1} - Status:`, response.status);
-        console.log(
-          `Variation ${i + 1} - Items found:`,
-          data.items?.length || 0
-        );
+        console.log(`  Variation ${i + 1}: "${currentQuery}"`);
 
-        if (data.items && data.items.length > 0) {
-          imageUrl = data.items[0].link;
-          console.log(`SUCCESS with variation ${i + 1}: ${imageUrl}`);
-          break;
-        } else {
-          console.log(`No results for variation ${i + 1}`);
+        try {
+          const fetch = (await import("node-fetch")).default;
+          const response = await fetch(url);
+          const data = await response.json();
+
+          if (data.items && data.items.length > 0) {
+            imageUrl = data.items[0].link;
+            imageSource = "google";
+            console.log(`  SUCCESS with variation ${i + 1}`);
+            break;
+          }
+        } catch (error) {
+          console.log(`  Error with variation ${i + 1}:`, error.message);
         }
-      } catch (error) {
-        console.log(`Error with variation ${i + 1}:`, error.message);
+      }
+
+      // Save Google image to database for future use
+      if (imageUrl && imageSource === "google") {
+        console.log("Saving Google image to database...");
+        await saveCachedImageToDB(q, imageUrl, "google");
       }
     }
 
-    // If Google API failed completely, try Pexels as fallback
+    // Fallback to Pexels if Google failed (but DON'T save to database)
     if (!imageUrl && PEXELS_API_KEY) {
-      console.log("Google API failed - trying Pexels fallback");
+      console.log("Google failed - trying Pexels fallback (NOT cached)...");
       try {
         const pexelsUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(
           q + " cosmetic skincare product"
@@ -244,14 +179,12 @@ router.get("/product-image", async (req, res) => {
         });
 
         const data = await response.json();
-        console.log("Pexels API response:", data);
 
         if (data.photos && data.photos.length > 0) {
           imageUrl = data.photos[0].src.medium;
-          console.log("SUCCESS with Pexels:", imageUrl);
-          // Don't save Pexels to cache - let it be fetched fresh each time
-        } else {
-          console.log("No results from Pexels either");
+          imageSource = "pexels";
+          console.log("SUCCESS with Pexels (temporary, not cached)");
+          // NOTE: We do NOT save Pexels images to database
         }
       } catch (error) {
         console.log("Pexels API error:", error.message);
@@ -261,18 +194,11 @@ router.get("/product-image", async (req, res) => {
     if (!imageUrl) {
       console.log("All APIs failed - no image found");
     } else {
-      // Only save Google images to cache, don't cache Pexels
-      if (GOOGLE_API_KEY && SEARCH_ENGINE_ID) {
-        console.log("Saving Google image to cache");
-        await saveCachedImageToDB(q, imageUrl, "google");
-      } else {
-        console.log("Pexels image found but not caching (to avoid conflicts)");
-      }
+      console.log(`Final result: ${imageSource} image`);
     }
 
-    console.log("Final image URL:", imageUrl);
     console.log("Memory cache size:", memoryCache.size);
-    console.log("=== END IMAGE SEARCH ===");
+    console.log("=== END IMAGE SEARCH ===\n");
 
     res.json({ imageUrl });
   } catch (error) {
@@ -299,53 +225,3 @@ router.delete("/clear-pexels-cache", async (req, res) => {
 });
 
 export default router;
-
-// Pexels fallback function
-async function searchPexels(query, res) {
-  try {
-    console.log("Using Pexels API for:", query);
-    const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
-
-    const searchTerms = [
-      `${query} cosmetic skincare product`,
-      `${query} skincare`,
-      `${query} cosmetic`,
-      `skincare product`,
-      `cosmetic product`,
-    ];
-
-    let imageUrl = null;
-
-    for (let term of searchTerms) {
-      const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(
-        term
-      )}&per_page=1&orientation=square`;
-      const fetch = (await import("node-fetch")).default;
-      const response = await fetch(url, {
-        headers: {
-          Authorization: PEXELS_API_KEY,
-        },
-      });
-
-      const data = await response.json();
-      console.log(
-        `Pexels search for "${term}":`,
-        data.photos?.length || 0,
-        "results"
-      );
-
-      if (data.photos && data.photos.length > 0) {
-        imageUrl = data.photos[0].src.medium;
-        console.log("Found Pexels image:", imageUrl);
-        // Save to database cache
-        await saveCachedImageToDB(query, imageUrl, "pexels");
-        break;
-      }
-    }
-
-    return res.json({ imageUrl });
-  } catch (error) {
-    console.error("Pexels search error:", error);
-    return res.json({ imageUrl: null });
-  }
-}

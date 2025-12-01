@@ -154,7 +154,7 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
         <div>
           {/* Controls */}
           {selectedRoutines?.length > 0 && (
-            <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg">
+            <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg mb-4">
               <span className="text-sm font-caption text-foreground">
                 Selected {selectedRoutines?.length} routine
                 {selectedRoutines?.length > 1 ? "s" : ""}
@@ -193,6 +193,7 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
                   onClick={() => navigate("/routine")}
                   iconName="Plus"
                   iconPosition="left"
+                  className="w-full sm:w-auto"
                 >
                   Start Routine Recommendations
                 </Button>
@@ -201,17 +202,17 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
               savedRoutines?.map((routine) => (
                 <div
                   key={routine?.id}
-                  className={`rounded-2xl glass-card p-6 transition-smooth hover:shadow-glow ${
+                  className={`rounded-2xl glass-card p-4 sm:p-6 transition-smooth hover:shadow-glow ${
                     selectedRoutines?.includes(routine?.id)
                       ? "ring-2 ring-primary/50"
                       : ""
                   }`}
                 >
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-3 sm:gap-4">
                     {/* Checkbox */}
                     <button
                       onClick={() => handleSelectRoutine(routine?.id)}
-                      className="mt-1 transition-smooth hover:scale-110"
+                      className="mt-1 transition-smooth hover:scale-110 flex-shrink-0"
                     >
                       <Icon
                         name={
@@ -228,20 +229,22 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
                       />
                     </button>
 
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       {/* Routine Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="font-heading font-semibold text-foreground mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-heading font-semibold text-foreground mb-2 text-base sm:text-lg">
                             {routine?.routineName ||
                               routine?.name ||
                               "Skincare Routine"}
                           </h3>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground font-caption">
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground font-caption">
                             <div className="flex items-center gap-1">
                               <Icon name="Calendar" size={14} />
                               <span>
-                                Created:{" "}
+                                <span className="hidden sm:inline">
+                                  Created:{" "}
+                                </span>
                                 {new Date(
                                   routine?.createdAt
                                 ).toLocaleDateString("vi-VN")}
@@ -260,7 +263,9 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
                             </div>
                             <div className="flex items-center gap-1">
                               <Icon name="User" size={14} />
-                              <span>{routine?.skinType}</span>
+                              <span className="capitalize">
+                                {routine?.skinType}
+                              </span>
                             </div>
                             {routine?.uvIndex !== null &&
                               routine?.uvIndex !== undefined && (
@@ -273,7 +278,7 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
                         </div>
 
                         <div
-                          className={`px-3 py-1 rounded-full text-xs font-caption font-medium ${
+                          className={`px-3 py-1 rounded-full text-xs font-caption font-medium whitespace-nowrap flex-shrink-0 ${
                             routine?.routineType === "complete"
                               ? "bg-gradient-to-r from-purple-100/50 to-pink-100/50 text-purple-700"
                               : "bg-gradient-to-r from-green-100/50 to-blue-100/50 text-green-700"
@@ -286,8 +291,8 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
                       </div>
 
                       {/* Routine Info */}
-                      <div className="bg-white/5 rounded-lg p-4 mb-4">
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                      <div className="bg-white/5 rounded-lg p-3 sm:p-4 mb-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 text-xs sm:text-sm">
                           <div>
                             <span className="text-muted-foreground block mb-1">
                               Type:
@@ -310,7 +315,7 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
                             <span className="text-muted-foreground block mb-1">
                               Price:
                             </span>
-                            <p className="font-medium text-foreground capitalize">
+                            <p className="font-medium text-foreground capitalize truncate">
                               {routine?.priceRange?.replace("-", " ")}
                             </p>
                           </div>
@@ -338,7 +343,7 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
                       {/* Actions */}
                       <div className="flex items-center justify-end">
                         <Button
-                          className="rounded-3xl shadow-glow"
+                          className="rounded-3xl shadow-glow w-full sm:w-auto"
                           variant="default"
                           size="sm"
                           onClick={() => handleViewDetail(routine)}

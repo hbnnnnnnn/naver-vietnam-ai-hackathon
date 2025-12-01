@@ -10,3 +10,13 @@ body {
   font-family: inherit;
   margin: unset;
 }
+
+/* Hide scrollbar for horizontal scroll on mobile tabs */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

@@ -180,6 +180,16 @@ class ApiService {
     return this.request(endpoint);
   }
 
+  async getRoutinesByPriceRange(filters = {}) {
+    const queryParams = new URLSearchParams(filters).toString();
+    return this.request(`/routines/price-range?${queryParams}`);
+  }
+
+  async getProductsByPriceRange(filters = {}) {
+    const queryParams = new URLSearchParams(filters).toString();
+    return this.request(`/routines/products/price-range?${queryParams}`);
+  }
+
   /**
    * Weather APIs
    */

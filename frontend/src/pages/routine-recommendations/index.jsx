@@ -17,6 +17,8 @@ const RoutineRecommendations = () => {
   const navigate = useNavigate();
   const [routineType, setRoutineType] = useState("minimal");
   const [priceRange, setPriceRange] = useState("budget-friendly");
+  const [priceMode, setPriceMode] = useState("total"); // "total" or "individual"
+  const [maxPrice, setMaxPrice] = useState(5000000); // Default 5 million VND
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -259,20 +261,88 @@ const RoutineRecommendations = () => {
       );
       const skinType = userProfile?.skinType?.toLowerCase() || "normal";
 
-      const filters = {
-        skinType: skinType,
-        strategy: routineType,
-        budgetRange: priceRange,
-      };
+      let morningData, nightData;
 
-      const data = await ApiService.getRoutines(filters);
+      if (priceMode === "total") {
+        const filters = {
+          skinType: skinType,
+          strategy: routineType,
+          minPrice: 500000,
+          maxPrice: maxPrice,
+        };
 
-      // Separate morning and night routines
-      const morningData = data.routines?.find((r) => r.name === "morning");
-      const nightData = data.routines?.find((r) => r.name === "night");
+        try {
+          const morningResponse = await ApiService.getRoutinesByPriceRange({
+            ...filters,
+            name: "morning",
+          });
+          morningData = morningResponse?.routine || null;
+        } catch (err) {
+          if (err.message && err.message.includes("404")) {
+            morningData = null;
+          } else {
+            throw err;
+          }
+        }
 
-      setMorningRoutine(morningData);
-      setNightRoutine(nightData);
+        // Fetch night routine
+        try {
+          const nightResponse = await ApiService.getRoutinesByPriceRange({
+            ...filters,
+            name: "night",
+          });
+          nightData = nightResponse?.routine || null;
+        } catch (err) {
+          if (err.message && err.message.includes("404")) {
+            nightData = null;
+          } else {
+            throw err;
+          }
+        }
+      } else {
+        // Use getRoutinesByProductPriceRange API (individual product price)
+        const filters = {
+          skinType: skinType,
+          strategy: routineType,
+          minPrice: 0,
+          maxPrice: maxPrice,
+        };
+
+        try {
+          const morningResponse = await ApiService.getProductsByPriceRange({
+            ...filters,
+            name: "morning",
+          });
+          morningData =
+            morningResponse?.routines?.find((r) => r.name === "morning") ||
+            null;
+        } catch (err) {
+          if (err.message && err.message.includes("404")) {
+            morningData = null;
+          } else {
+            throw err;
+          }
+        }
+
+        // Fetch night routine
+        try {
+          const nightResponse = await ApiService.getProductsByPriceRange({
+            ...filters,
+            name: "night",
+          });
+          nightData =
+            nightResponse?.routines?.find((r) => r.name === "night") || null;
+        } catch (err) {
+          if (err.message && err.message.includes("404")) {
+            nightData = null;
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      setMorningRoutine(morningData || null);
+      setNightRoutine(nightData || null);
     } catch (error) {
       console.error("Error fetching routines:", error);
       setApiError(error.message);
@@ -286,7 +356,7 @@ const RoutineRecommendations = () => {
     if (showResults) {
       fetchRoutines();
     }
-  }, [routineType, priceRange, showResults]);
+  }, [routineType, priceMode, maxPrice, showResults]);
 
   // Mock routine data
   const routineData = {
@@ -751,8 +821,8 @@ const RoutineRecommendations = () => {
           )}
 
           {/* Page Header */}
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center space-x-3 mb-4">
+          <div className="text-center mb-0">
+            <div className="flex items-center justify-center space-x-3 mb-0">
               <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glass">
                 <Icon name="Calendar" size={24} color="white" />
               </div>
@@ -775,25 +845,29 @@ const RoutineRecommendations = () => {
 
           {/* Filter Controls */}
           {!isViewingFromProfile && (
-            <div className="mt-14">
+            <div className="mt-0">
               <FilterControls
                 routineType={routineType}
                 setRoutineType={setRoutineType}
                 priceRange={priceRange}
                 setPriceRange={setPriceRange}
+                priceMode={priceMode}
+                setPriceMode={setPriceMode}
+                maxPrice={maxPrice}
+                setMaxPrice={setMaxPrice}
               />
             </div>
           )}
 
           {/* CTA Button */}
           {!isViewingFromProfile && (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-10">
               <Button
                 variant="default"
                 size="lg"
                 onClick={handleAnalysisStart}
                 disabled={isAnalyzing}
-                className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-6"
+                className="bg-gradient-primary hover:opacity-90 text-white px-8 py-4 text-lg font-medium shadow-glass-lg animate-glass-float rounded-3xl  mt-0"
                 iconName="Camera"
                 iconPosition="left"
                 iconSize={20}

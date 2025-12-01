@@ -6,6 +6,10 @@ const FilterControls = ({
   setRoutineType,
   priceRange,
   setPriceRange,
+  priceMode,
+  setPriceMode,
+  maxPrice,
+  setMaxPrice,
 }) => {
   const routineOptions = [
     {
@@ -53,9 +57,30 @@ const FilterControls = ({
     },
   ];
 
+  const priceModeOptions = [
+    {
+      value: "total",
+      label: "Total routine price",
+      description: "Based on total cost of all products in routine",
+    },
+    {
+      value: "individual",
+      label: "Individual product price",
+      description: "Based on price range of each product",
+    },
+  ];
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(price);
+  };
+
   return (
     <div className="glass-card p-6 mb-8 rounded-3xl">
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* First Column: Routine Type */}
         <div className="flex-1">
           <Select
             label="Skincare routine type"
@@ -68,16 +93,48 @@ const FilterControls = ({
           />
         </div>
 
+        {/* Second Column: Price Mode */}
         <div className="flex-1">
           <Select
-            label="Desired price range"
-            description="Select a budget suitable for your routine"
-            options={priceOptions}
-            value={priceRange}
-            onChange={setPriceRange}
-            placeholder="Select price range..."
+            label="Price calculation method"
+            description="Choose how to calculate price range for your routine"
+            options={priceModeOptions}
+            value={priceMode}
+            onChange={setPriceMode}
+            placeholder="Select price mode..."
             className="w-full"
           />
+        </div>
+      </div>
+
+      {/* Price Slider - Full Width Below */}
+      <div className="mt-6">
+        <label className="block text-sm font-medium text-foreground mb-2">
+          {priceMode === "total"
+            ? "Maximum total price"
+            : "Maximum price per product"}
+        </label>
+        <div className="space-y-4">
+          <input
+            type="range"
+            min={priceMode === "total" ? "500000" : "0"}
+            max="20000000"
+            step="100000"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(Number(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
+          />
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">
+              {priceMode === "total" ? "500,000 VND" : "0 VND"}
+            </span>
+            <span className="text-lg font-semibold text-primary">
+              {formatPrice(maxPrice)}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              20,000,000 VND
+            </span>
+          </div>
         </div>
       </div>
     </div>
