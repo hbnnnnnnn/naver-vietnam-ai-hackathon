@@ -17,6 +17,8 @@ const RoutineRecommendations = () => {
   const navigate = useNavigate();
   const [routineType, setRoutineType] = useState("minimal");
   const [priceRange, setPriceRange] = useState("budget-friendly");
+  const [priceMode, setPriceMode] = useState("total"); // "total" or "individual"
+  const [maxPrice, setMaxPrice] = useState(5000000); // Default 5 million VND
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -259,20 +261,88 @@ const RoutineRecommendations = () => {
       );
       const skinType = userProfile?.skinType?.toLowerCase() || "normal";
 
-      const filters = {
-        skinType: skinType,
-        strategy: routineType,
-        budgetRange: priceRange,
-      };
+      let morningData, nightData;
 
-      const data = await ApiService.getRoutines(filters);
+      if (priceMode === "total") {
+        const filters = {
+          skinType: skinType,
+          strategy: routineType,
+          minPrice: 500000,
+          maxPrice: maxPrice,
+        };
 
-      // Separate morning and night routines
-      const morningData = data.routines?.find((r) => r.name === "morning");
-      const nightData = data.routines?.find((r) => r.name === "night");
+        try {
+          const morningResponse = await ApiService.getRoutinesByPriceRange({
+            ...filters,
+            name: "morning",
+          });
+          morningData = morningResponse?.routine || null;
+        } catch (err) {
+          if (err.message && err.message.includes("404")) {
+            morningData = null;
+          } else {
+            throw err;
+          }
+        }
 
-      setMorningRoutine(morningData);
-      setNightRoutine(nightData);
+        // Fetch night routine
+        try {
+          const nightResponse = await ApiService.getRoutinesByPriceRange({
+            ...filters,
+            name: "night",
+          });
+          nightData = nightResponse?.routine || null;
+        } catch (err) {
+          if (err.message && err.message.includes("404")) {
+            nightData = null;
+          } else {
+            throw err;
+          }
+        }
+      } else {
+        // Use getRoutinesByProductPriceRange API (individual product price)
+        const filters = {
+          skinType: skinType,
+          strategy: routineType,
+          minPrice: 0,
+          maxPrice: maxPrice,
+        };
+
+        try {
+          const morningResponse = await ApiService.getProductsByPriceRange({
+            ...filters,
+            name: "morning",
+          });
+          morningData =
+            morningResponse?.routines?.find((r) => r.name === "morning") ||
+            null;
+        } catch (err) {
+          if (err.message && err.message.includes("404")) {
+            morningData = null;
+          } else {
+            throw err;
+          }
+        }
+
+        // Fetch night routine
+        try {
+          const nightResponse = await ApiService.getProductsByPriceRange({
+            ...filters,
+            name: "night",
+          });
+          nightData =
+            nightResponse?.routines?.find((r) => r.name === "night") || null;
+        } catch (err) {
+          if (err.message && err.message.includes("404")) {
+            nightData = null;
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      setMorningRoutine(morningData || null);
+      setNightRoutine(nightData || null);
     } catch (error) {
       console.error("Error fetching routines:", error);
       setApiError(error.message);
@@ -286,7 +356,7 @@ const RoutineRecommendations = () => {
     if (showResults) {
       fetchRoutines();
     }
-  }, [routineType, priceRange, showResults]);
+  }, [routineType, priceMode, maxPrice, showResults]);
 
   // Mock routine data
   const routineData = {
@@ -781,6 +851,10 @@ const RoutineRecommendations = () => {
                 setRoutineType={setRoutineType}
                 priceRange={priceRange}
                 setPriceRange={setPriceRange}
+                priceMode={priceMode}
+                setPriceMode={setPriceMode}
+                maxPrice={maxPrice}
+                setMaxPrice={setMaxPrice}
               />
             </div>
           )}
