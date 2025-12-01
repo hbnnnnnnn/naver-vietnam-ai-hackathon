@@ -18,13 +18,13 @@ const Header = () => {
       label: "Product Analysis",
       path: "/product",
       icon: "Camera",
-      tooltip: "Take a photo and analyze product ingredients",
+      tooltip: "Analyze product ingredients",
     },
     {
       label: "Routine Recommendations",
       path: "/routine",
       icon: "Calendar",
-      tooltip: "Get personalized skincare routine suggestions",
+      tooltip: "Get personalized skincare routine",
     },
     {
       label: "AI Chat",
@@ -144,7 +144,7 @@ const Header = () => {
                     <Icon name="Sparkles" size={20} color="white" />
                   </div>
                   <span className="text-lg font-heading font-semibold gradient-text">
-                    SkinCare
+                    SkinCare Analyzer
                   </span>
                 </div>
                 <Button

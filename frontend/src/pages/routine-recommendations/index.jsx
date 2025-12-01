@@ -790,7 +790,7 @@ const RoutineRecommendations = () => {
   return (
     <>
       <Helmet>
-        <title>Skincare Routine Recommendations - SkinCare Analyzer</title>
+        <title>routine</title>
         <meta
           name="description"
           content="Get personalized skincare routine recommendations based on your skin type and budget. From minimal to comprehensive routines."
@@ -822,7 +822,7 @@ const RoutineRecommendations = () => {
 
           {/* Page Header */}
           <div className="text-center mb-0">
-            <div className="flex items-center justify-center space-x-3 mb-0">
+            <div className="flex items-center justify-center space-x-3 mb-4">
               <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glass">
                 <Icon name="Calendar" size={24} color="white" />
               </div>
@@ -839,13 +839,13 @@ const RoutineRecommendations = () => {
             <p className="text-lg text-muted-foreground font-caption max-w-2xl mx-auto">
               {isViewingFromProfile
                 ? "View details of your saved routine. Click on steps to see product suggestions."
-                : "Get personalized skincare routine recommendations based on your lifestyle and budget. From minimal to comprehensive routines, we help you build the perfect routine."}
+                : "Get personalized skincare routine recommendations based on your skin type, routine type and your budget"}
             </p>
           </div>
 
           {/* Filter Controls */}
           {!isViewingFromProfile && (
-            <div className="mt-0">
+            <div className="mt-2">
               <FilterControls
                 routineType={routineType}
                 setRoutineType={setRoutineType}
@@ -956,7 +956,7 @@ const RoutineRecommendations = () => {
                   <div className="flex justify-center mb-12">
                     <button
                       onClick={() => setIsSaveModalOpen(true)}
-                      className="bg-gradient-primary text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2 hover:scale-105"
+                      className="rounded-3xl bg-gradient-primary text-white px-8 py-3 font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2 hover:scale-105"
                     >
                       <Icon name="Heart" size={20} />
                       <span>Save Complete Routine</span>
