@@ -190,6 +190,12 @@ class ApiService {
     return this.request(`/routines/products/price-range?${queryParams}`);
   }
 
+  async getPriceRanges(skinType) {
+    return this.request(
+      `/routines/price-ranges?skinType=${encodeURIComponent(skinType)}`
+    );
+  }
+
   /**
    * Weather APIs
    */

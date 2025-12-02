@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Select from "../../../components/ui/Select";
+import ApiService from "../../../services/api";
 
 const FilterControls = ({
   routineType,
@@ -11,6 +12,70 @@ const FilterControls = ({
   maxPrice,
   setMaxPrice,
 }) => {
+  const [priceRanges, setPriceRanges] = useState(null);
+  const [isLoadingRanges, setIsLoadingRanges] = useState(false);
+
+  // Fetch price ranges from backend
+  useEffect(() => {
+    const fetchPriceRanges = async () => {
+      try {
+        setIsLoadingRanges(true);
+        const userProfile = JSON.parse(
+          localStorage.getItem("userProfile") || "{}"
+        );
+        const skinType = userProfile?.skinType?.toLowerCase() || "normal";
+
+        const data = await ApiService.getPriceRanges(skinType);
+        setPriceRanges(data.priceRanges);
+      } catch (error) {
+        console.error("Error fetching price ranges:", error);
+      } finally {
+        setIsLoadingRanges(false);
+      }
+    };
+
+    fetchPriceRanges();
+  }, []);
+
+  // Get min/max for current strategy and price mode
+  const getCurrentPriceRange = () => {
+    if (!priceRanges || !priceRanges[routineType]) {
+      return {
+        min: priceMode === "total" ? 2000000 : 100000,
+        max: 20000000,
+      };
+    }
+
+    const strategyRanges = priceRanges[routineType];
+    let min, max;
+
+    if (priceMode === "total") {
+      min = strategyRanges.totalRoutinePrice.min || 2000000;
+      max = strategyRanges.totalRoutinePrice.max || 20000000;
+    } else {
+      min = strategyRanges.individualProductPrice.min || 100000;
+      max = strategyRanges.individualProductPrice.max || 20000000;
+    }
+
+    min = Math.ceil(min / 1000) * 1000;
+    max = Math.ceil(max / 1000) * 1000;
+
+    return { min, max };
+  };
+
+  const currentRange = getCurrentPriceRange();
+
+  // Update maxPrice when strategy or mode changes
+  useEffect(() => {
+    // Set to min when strategy or mode changes
+    setMaxPrice(currentRange.min);
+  }, [routineType, priceMode]);
+
+  // Clamp maxPrice to current range for display
+  const clampedMaxPrice = Math.min(
+    Math.max(maxPrice, currentRange.min),
+    currentRange.max
+  );
   const routineOptions = [
     {
       value: "minimal",
@@ -113,26 +178,32 @@ const FilterControls = ({
           {priceMode === "total"
             ? "Maximum total price"
             : "Maximum price per product"}
+          {isLoadingRanges && (
+            <span className="ml-2 text-xs text-muted-foreground">
+              (Loading ranges...)
+            </span>
+          )}
         </label>
         <div className="space-y-1">
           <input
             type="range"
-            min={priceMode === "total" ? "2000000" : "100000"}
-            max="20000000"
-            step="100000"
+            min={currentRange.min}
+            max={currentRange.max}
+            step="1000"
             value={maxPrice}
             onChange={(e) => setMaxPrice(Number(e.target.value))}
             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
+            disabled={isLoadingRanges}
           />
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">
-              {priceMode === "total" ? "2,000,000 VND" : "100,000 VND"}
+              {formatPrice(currentRange.min)}
             </span>
             <span className="text-lg font-semibold text-primary">
               {formatPrice(maxPrice)}
             </span>
             <span className="text-sm text-muted-foreground">
-              20,000,000 VND
+              {formatPrice(currentRange.max)}
             </span>
           </div>
         </div>
