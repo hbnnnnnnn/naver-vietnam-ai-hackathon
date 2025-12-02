@@ -2,6 +2,7 @@ import React from "react";
 import Icon from "../../../components/AppIcon";
 import Image from "../../../components/AppImage";
 import Button from "../../../components/ui/Button";
+import { parseMarkdown } from "../../../utils/markdown";
 
 const ChatMessage = ({ message, isUser, timestamp, isTyping = false, onShowMore, onSuggestionClick }) => {
   const formatTime = (date) => {
@@ -60,24 +61,7 @@ const ChatMessage = ({ message, isUser, timestamp, isTyping = false, onShowMore,
           {/* Text bubble */}
           {(!message.type || message.type === 'text') && (
             <div className="text-sm leading-relaxed text-foreground">
-              {message?.content?.split("\n")?.map((line, index) => {
-                if (line?.startsWith("**") && line?.endsWith("**")) {
-                  return (
-                    <h4 key={index} className="font-semibold text-primary mb-2">{line?.replace(/\*\*/g, "")}</h4>
-                  );
-                }
-                if (line?.startsWith("• ")) {
-                  return (
-                    <li key={index} className="ml-4 mb-1 list-disc">{line?.substring(2)}</li>
-                  );
-                }
-                if (line?.trim() === "") {
-                  return <br key={index} />;
-                }
-                return (
-                  <p key={index} className="mb-2 last:mb-0">{line}</p>
-                );
-              })}
+              {parseMarkdown(message?.content)}
             </div>
           )}
 
@@ -178,24 +162,7 @@ const ChatMessage = ({ message, isUser, timestamp, isTyping = false, onShowMore,
             {message.additionalResponses.map((response, index) => (
               <div key={index} className="glass-card p-4 rounded-2xl rounded-tl-md">
                 <div className="text-sm leading-relaxed text-foreground">
-                  {response?.split("\n")?.map((line, lineIndex) => {
-                    if (line?.startsWith("**") && line?.endsWith("**")) {
-                      return (
-                        <h4 key={lineIndex} className="font-semibold text-primary mb-2">{line?.replace(/\*\*/g, "")}</h4>
-                      );
-                    }
-                    if (line?.startsWith("• ")) {
-                      return (
-                        <li key={lineIndex} className="ml-4 mb-1 list-disc">{line?.substring(2)}</li>
-                      );
-                    }
-                    if (line?.trim() === "") {
-                      return <br key={lineIndex} />;
-                    }
-                    return (
-                      <p key={lineIndex} className="mb-2 last:mb-0">{line}</p>
-                    );
-                  })}
+                  {parseMarkdown(response)}
                 </div>
               </div>
             ))}
