@@ -306,9 +306,11 @@ const ProductAnalysis = () => {
     setCurrentStep("upload");
     setError(null);
 
+    let progressInterval;
+
     try {
       // Progress simulation while API call happens
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setAnalysisProgress((prev) => {
           if (prev >= 90) return prev;
           return prev + Math.random() * 10;
@@ -330,6 +332,17 @@ const ProductAnalysis = () => {
       );
 
       clearInterval(progressInterval);
+
+      // Check if backend returned success field
+      if (response.success === false) {
+        // Backend failed to process the request
+        throw new Error(
+          response.message ||
+            response.error ||
+            "Analysis failed. Please try again with clearer images."
+        );
+      }
+
       setCurrentStep("risk");
       setAnalysisProgress(90);
 
@@ -407,11 +420,18 @@ const ProductAnalysis = () => {
       }
     } catch (error) {
       console.error("API Analysis failed:", error);
-      setError(error.message);
-      setIsAnalyzing(false);
 
-      // Fallback to mock data if API fails
-      simulateAnalysis();
+      // Clear progress interval if it's still running
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+
+      setError(error.message || "Analysis failed. Please try again.");
+      setIsAnalyzing(false);
+      setAnalysisProgress(0);
+      setCurrentStep("upload");
+
+      // Don't fallback to mock data anymore - let user retry with real API
     }
   };
 
@@ -518,6 +538,9 @@ const ProductAnalysis = () => {
 
   const handleAnalyzeProduct = () => {
     if (uploadedImages?.front || uploadedImages?.back) {
+      // Clear any previous error
+      setError(null);
+
       if (useRealAPI && (uploadedFiles?.front || uploadedFiles?.back)) {
         analyzeProductWithAPI();
       } else {
@@ -602,6 +625,31 @@ const ProductAnalysis = () => {
                 </Button>
               )}
             </div>
+
+            {/* Error Display */}
+            {error && (
+              <div className="flex justify-center mb-8">
+                <div className="glass-card p-4 rounded-xl border border-red-200 bg-red-50 max-w-md">
+                  <div className="flex items-start space-x-3">
+                    <Icon
+                      name="AlertCircle"
+                      size={20}
+                      className="text-red-500 flex-shrink-0 mt-0.5"
+                    />
+                    <div>
+                      <h4 className="text-sm font-medium text-red-800 mb-1">
+                        Analysis Failed
+                      </h4>
+                      <p className="text-xs text-red-600">{error}</p>
+                      <p className="text-xs text-red-500/70 mt-2">
+                        Please try again with clearer product images or check
+                        your internet connection.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* API Toggle & Error Display */}
 
