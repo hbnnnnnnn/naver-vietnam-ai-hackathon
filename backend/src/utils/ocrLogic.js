@@ -14,30 +14,44 @@ const OCR_CONFIG = {
 
 export async function callNaverOcr({ secretKey, apiUrl, imagePath, imageFormat = OCR_CONFIG.DEFAULT_FORMAT, lang = OCR_CONFIG.DEFAULT_LANG }) {
   if (!secretKey || !apiUrl || !imagePath) throw new Error('Missing required parameters: secretKey, apiUrl, and imagePath are required');
-  
+
+  // Auto-detect image format from file extension if not explicitly provided
+  let detectedFormat = imageFormat;
+  const ext = path.extname(imagePath).toLowerCase().replace('.', '');
+  if (ext === "webp") {
+    throw new Error("WebP format is not supported. Please upload a PNG or JPG image.");
+  }
+  if (!imageFormat || imageFormat === OCR_CONFIG.DEFAULT_FORMAT) {
+    if (["png", "jpg", "jpeg"].includes(ext)) {
+      detectedFormat = ext === "jpeg" ? "jpg" : ext;
+    } else {
+      detectedFormat = OCR_CONFIG.DEFAULT_FORMAT;
+    }
+  }
+
   // Read image file and encode to base64
   const imageBuffer = fs.readFileSync(imagePath);
   const base64Data = imageBuffer.toString('base64');
-  
+
   const message = {
     version: OCR_CONFIG.VERSION,
     requestId: `${Date.now()}`,
     timestamp: Date.now(),
-    images: [{ format: imageFormat, name: path.basename(imagePath), data: base64Data }],
+    images: [{ format: detectedFormat, name: path.basename(imagePath), data: base64Data }],
     lang: lang
   };
-  
+
   // Log request details for debugging
 //   console.log('[OCR] Request details:', {
 //     apiUrl,
 //     imagePath,
-//     imageFormat,
+//     imageFormat: detectedFormat,
 //     lang,
 //     message,
 //     messageString: JSON.stringify(message),
 //     headers: { 'X-OCR-SECRET': secretKey, 'Content-Type': 'application/json' }
 //   });
-  
+
   try {
     const response = await axios({
       method: 'post',
