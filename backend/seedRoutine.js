@@ -6,14 +6,7 @@ import Product from "./src/models/Product.js";
 import Routine from "./src/models/Routine.js";
 
 const mongoURI = process.env.MONGODB_URI;
-
 const SKIN_TYPES = ["combination", "dry", "oily", "normal", "sensitive"];
-
-const PRICE_RANGES = [
-  { name: "budget-friendly", min: 0, max: 500000 },
-  { name: "mid-range", min: 500000, max: 1500000 },
-  { name: "premium", min: 1500000, max: Infinity },
-];
 
 const MORNING_STEPS = [
   { name: "Cleanse", category: "Cleanser", required: true },
@@ -39,215 +32,206 @@ const VARIATION_STRATEGIES = [
   "anti_aging",
 ];
 
-function getSkinFieldName(skinType) {
-  return `${skinType}_skin`;
+const SORTING_STRATEGIES = [
+  { name: "budget_focused", sort: { price: 1, rank: -1 } }, // Cheapest first
+  { name: "quality_focused", sort: { rank: -1, price: -1 } }, // Highest rank first
+  { name: "balanced", sort: { rank: -1, price: 1 } }, // High rank, but cheaper preferred
+];
+
+function getSkinFieldName(t) { return `${t}_skin`; }
+
+const seenSignatures = new Set();
+
+function getRoutineSignature(r) {
+  const steps = r.steps.map(s =>
+    `${s.name}:${s.products.sort().join(",")}`
+  ).sort().join("|");
+  return `${r.skinType}|${r.name}|${r.strategy}|${r.priceBracket}|${steps}`;
 }
 
-async function getProductsForCategory(
-  category,
-  skinType,
-  priceRange,
-  options = {}
-) {
-  const skinField = getSkinFieldName(skinType);
-  const query = {
-    category: category,
-    [skinField]: true,
-    price: { $gte: priceRange.min, $lte: priceRange.max },
-  };
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. Discover real price brackets from current product database
+// ─────────────────────────────────────────────────────────────────────────────
+async function discoverPriceBrackets() {
+  console.log("Analyzing price distribution...");
+  const stats = await Product.aggregate([
+    {
+      $match: {
+        $or: SKIN_TYPES.map(t => ({ [getSkinFieldName(t)]: true }))
+      }
+    },
+    { $group: { _id: null, prices: { $push: "$price" } } }
+  ]);
 
-  if (options.minSpf) {
-    query.spf = { $gte: options.minSpf };
-  }
+  const prices = stats[0]?.prices?.sort((a, b) => a - b) || [];
+  const total = prices.length;
 
-  const products = await Product.find(query).sort({ rank: -1 }).limit(10);
+  const brackets = [
+    { name: "budget",        p: 30 },
+    { name: "affordable",    p: 50 },
+    { name: "mid-range",     p: 70 },
+    { name: "premium",       p: 85 },
+    { name: "luxury",        p: 97 },
+    { name: "ultra-luxury",  p: 100 },
+  ];
 
-  return products;
+  return brackets.map(b => ({
+    name: b.name,
+    maxPerProduct: b.p === 100 ? Infinity : prices[Math.floor(total * b.p / 100)],
+    percentile: b.p
+  }));
 }
 
-async function selectProductsForStep(step, skinType, priceRange, strategy) {
-  const products = await getProductsForCategory(
-    step.category,
-    skinType,
-    priceRange,
-    { minSpf: step.minSpf }
-  );
-
-  if (products.length === 0) return null;
-
-  const numProducts = Math.min(Math.max(3, products.length), 5);
-  const selectedProducts = products.slice(0, numProducts);
-
-  return selectedProducts.map((p) => p._id);
-}
-
-async function generateRoutineVariation(
-  routineType,
-  skinType,
-  priceRange,
-  strategy
-) {
-  const steps = routineType === "morning" ? MORNING_STEPS : NIGHT_STEPS;
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. Generate one routine
+// ─────────────────────────────────────────────────────────────────────────────
+async function generateRoutine(type, skinType, bracket, strategy, sortingStrategy) {
+  const stepsDef = type === "morning" ? MORNING_STEPS : NIGHT_STEPS;
   const selectedSteps = [];
 
-  for (const step of steps) {
+  for (const step of stepsDef) {
+    // Strategy filtering (your logic stays 100% intact)
     if (strategy === "minimal" && !step.required) continue;
+    if (strategy === "focus_treatment" && !step.required && step.category !== "Treatment") continue;
+    if (strategy === "focus_hydration" && !step.required && step.category !== "Moisturizer") continue;
+    if (strategy === "anti_aging" && !step.required && step.category !== "Eye cream") continue;
+    if (strategy === "complete" && step.name === "Night Mask") ; // always include for complete
 
-    if (
-      strategy === "focus_treatment" &&
-      !step.required &&
-      step.category !== "Treatment"
-    )
-      continue;
-    if (
-      strategy === "focus_hydration" &&
-      !step.required &&
-      step.category !== "Moisturizer"
-    )
-      continue;
-    if (
-      strategy === "anti_aging" &&
-      !step.required &&
-      step.category !== "Eye cream"
-    )
-      continue;
+    const query = {
+      category: step.category,
+      [getSkinFieldName(skinType)]: true,
+    };
 
-    const productIds = await selectProductsForStep(
-      step,
-      skinType,
-      priceRange,
-      strategy
-    );
-
-    if (productIds && productIds.length > 0) {
-      selectedSteps.push({
-        name: step.name,
-        products: productIds,
-      });
-    } else if (step.required) {
-      return null;
+    // For budget brackets, don't limit by price to find absolute cheapest
+    // For other brackets, enforce the price limit
+    if (bracket.name !== "budget" && bracket.name !== "affordable") {
+      query.price = { $lte: bracket.maxPerProduct };
     }
+
+    if (step.minSpf) query.spf = { $gte: step.minSpf };
+
+    // Use the sorting strategy and get more products
+    let products = await Product.find(query)
+      .sort(sortingStrategy.sort)
+      .limit(30) // Increased from 12 to 30 for more variety
+      .lean();
+
+    if (products.length === 0) {
+      if (step.required) return null;
+      continue;
+    }
+
+    // For budget-focused sorting, take cheaper products; otherwise add randomness
+    let take;
+    if (sortingStrategy.name === "budget_focused") {
+      take = 5 + Math.floor(Math.random() * 4); // 5-8 products, focusing on cheaper ones
+    } else {
+      take = 4 + Math.floor(Math.random() * 3); // 4-6 products
+    }
+    products = products.slice(0, take);
+
+    selectedSteps.push({
+      name: step.name,
+      category: step.category,
+      products: products.map(p => p._id),
+    });
   }
 
-  if (selectedSteps.length === 0) return null;
+  // Require at least 2 steps for a valid routine (minimal night has 2 required steps)
+  if (selectedSteps.length < 2) return null;
 
-  return {
-    name: routineType,
+  // Calculate total price and avg rank
+  let totalPrice = 0;
+  let totalRank = 0;
+
+  for (const step of selectedSteps) {
+    const stepProducts = await Product.find({ _id: { $in: step.products } }).lean();
+    const minPrice = Math.min(...stepProducts.map(p => p.price || 0));
+    const maxRank = Math.max(...stepProducts.map(p => p.rank || 0));
+    totalPrice += minPrice;
+    totalRank += maxRank;
+  }
+
+  const routine = {
+    skinType,
+    name: type,
+    strategy,
+    priceBracket: bracket.name,
+    maxPricePerProduct: bracket.maxPerProduct,
+    totalPrice,
     steps: selectedSteps,
-    skinType: skinType,
-    strategy: strategy,
-    budgetRange: priceRange.name,
+    totalProducts: selectedSteps.reduce((a, s) => a + s.products.length, 0),
+    avgRank: totalRank / selectedSteps.length,
+    createdAt: new Date(),
   };
+
+  const sig = getRoutineSignature(routine);
+  if (seenSignatures.has(sig)) return null;
+  seenSignatures.add(sig);
+
+  return routine;
 }
 
-async function generateAllRoutines() {
-  const routines = [];
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. Main seeding
+// ─────────────────────────────────────────────────────────────────────────────
+async function seed() {
+  await mongoose.connect(mongoURI);
+  console.log("Connected to MongoDB");
 
-  console.log("Generating diverse routines...");
+  const productCount = await Product.countDocuments();
+  console.log(`Found ${productCount} products`);
+
+  await Routine.deleteMany({});
+  seenSignatures.clear();
+
+  const brackets = await discoverPriceBrackets();
+  console.log("Discovered price brackets:", brackets.map(b => `${b.name}: ≤ ${b.maxPerProduct.toLocaleString()}đ`).join(" | "));
+
+  const allRoutines = [];
 
   for (const skinType of SKIN_TYPES) {
-    console.log(`\nGenerating routines for ${skinType} skin...`);
+    console.log(`\n${skinType.toUpperCase()} skin`);
+    for (const bracket of brackets) {
+      console.log(`  ${bracket.name} (≤ ${bracket.maxPerProduct === Infinity ? "∞" : bracket.maxPerProduct.toLocaleString()}đ)`);
+      let generatedThisBracket = 0;
 
-    for (const priceRange of PRICE_RANGES) {
-      console.log(
-        `  Budget range: ${priceRange.name} (${priceRange.min} - ${
-          priceRange.max === Infinity ? "∞" : priceRange.max
-        } VND)`
-      );
+      // For budget/affordable brackets, prioritize budget_focused sorting
+      // For other brackets, use all sorting strategies for variety
+      const sortingStrategies = (bracket.name === "budget" || bracket.name === "affordable")
+        ? [SORTING_STRATEGIES[0], SORTING_STRATEGIES[2]] // budget_focused and balanced
+        : SORTING_STRATEGIES;
 
       for (const strategy of VARIATION_STRATEGIES) {
-        const morningRoutine = await generateRoutineVariation(
-          "morning",
-          skinType,
-          priceRange,
-          strategy
-        );
-
-        if (morningRoutine) {
-          routines.push(morningRoutine);
-          const totalProducts = morningRoutine.steps.reduce(
-            (sum, step) => sum + step.products.length,
-            0
-          );
-          console.log(
-            `    ✓ Morning routine (${strategy}): ${morningRoutine.steps.length} steps, ${totalProducts} products recommended`
-          );
-        }
-
-        const nightRoutine = await generateRoutineVariation(
-          "night",
-          skinType,
-          priceRange,
-          strategy
-        );
-
-        if (nightRoutine) {
-          routines.push(nightRoutine);
-          const totalProducts = nightRoutine.steps.reduce(
-            (sum, step) => sum + step.products.length,
-            0
-          );
-          console.log(
-            `    ✓ Night routine (${strategy}): ${nightRoutine.steps.length} steps, ${totalProducts} products recommended`
-          );
+        for (const sortingStrategy of sortingStrategies) {
+          for (const type of ["morning", "night"]) {
+            // Try up to 5 times to get a unique routine for this combo
+            for (let attempt = 0; attempt < 5; attempt++) {
+              const r = await generateRoutine(type, skinType, bracket, strategy, sortingStrategy);
+              if (r) {
+                allRoutines.push(r);
+                generatedThisBracket++;
+                break;
+              }
+            }
+          }
         }
       }
+      console.log(`    → ${generatedThisBracket} unique routines`);
     }
   }
 
-  return { routines };
-}
-
-async function seed() {
-  try {
-    await mongoose.connect(mongoURI);
-    console.log("Connected to MongoDB");
-
-    const productCount = await Product.countDocuments();
-    if (productCount === 0) {
-      console.error("No products found! Please run seedProduct.js first.");
-      process.exit(1);
-    }
-    console.log(`Found ${productCount} products in database`);
-
-    await Routine.deleteMany({});
-    console.log("Cleared existing routines");
-
-    const { routines } = await generateAllRoutines();
-
-    if (routines.length > 0) {
-      await Routine.insertMany(routines);
-      console.log(`\n✅ Successfully seeded ${routines.length} routines`);
-      console.log(`📊 Statistics:`);
-      console.log(`   - Total routines: ${routines.length}`);
-      console.log(`   - Skin types covered: ${SKIN_TYPES.length}`);
-      console.log(`   - Budget ranges: ${PRICE_RANGES.length}`);
-      console.log(`   - Variation strategies: ${VARIATION_STRATEGIES.length}`);
-      // ...existing code...
-
-      // Budget range distribution
-      const budgetCounts = PRICE_RANGES.reduce((acc, range) => {
-        acc[range.name] = routines.filter(
-          (r) => r.budgetRange === range.name
-        ).length;
-        return acc;
-      }, {});
-      console.log(`   - Budget range distribution:`);
-      Object.entries(budgetCounts).forEach(([range, count]) => {
-        console.log(`     • ${range}: ${count} routines`);
-      });
-    } else {
-      console.log("⚠️  No routines were generated. Check your product data.");
-    }
-
-    mongoose.connection.close();
-    console.log("\nDisconnected from MongoDB");
-    process.exit(0);
-  } catch (error) {
-    console.error("Error seeding routines:", error);
-    mongoose.connection.close();
-    process.exit(1);
+  if (allRoutines.length > 0) {
+    await Routine.insertMany(allRoutines);
+    console.log(`\nSUCCESS: Successfully seeded ${allRoutines.length} unique, data-driven routines`);
+  } else {
+    console.log("No routines generated – check product data");
   }
+
+  await mongoose.connection.close();
 }
 
-seed();
+seed().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

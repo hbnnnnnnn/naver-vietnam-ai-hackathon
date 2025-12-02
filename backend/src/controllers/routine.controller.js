@@ -9,6 +9,10 @@ const STRATEGY_ORDER = {
   anti_aging: 5,
 };
 
+// In-memory cache for price ranges with TTL
+const priceRangeCache = new Map();
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
+
 // Helper function to select the single best morning/night pair
 const groupRoutinesByMorningNight = (routines, maxBudget = null, enforceMaxBudget = true) => {
   // Separate morning and night routines
@@ -465,5 +469,100 @@ export const getRoutinesByProductPriceRange = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error retrieving routines", error: error.message });
+  }
+};
+
+export const getPriceRanges = async (req, res) => {
+  try {
+    const { skinType } = req.query;
+
+    if (!skinType) {
+      return res
+        .status(400)
+        .json({ message: "skinType query parameter is required" });
+    }
+
+    const normalizedSkinType = skinType.toLowerCase();
+    const cacheKey = `price_ranges_${normalizedSkinType}`;
+
+    // Check cache first
+    const cached = priceRangeCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return res.status(200).json(cached.data);
+    }
+
+    const strategies = Object.keys(STRATEGY_ORDER);
+    const priceRanges = {};
+
+    // Process each strategy in parallel for better performance
+    await Promise.all(
+      strategies.map(async (strategy) => {
+        // Aggregation for total routine price (min/max of totalPrice)
+        const totalPriceAggregation = await Routine.aggregate([
+          { $match: { skinType: normalizedSkinType, strategy: strategy } },
+          {
+            $group: {
+              _id: null,
+              minTotalPrice: { $min: "$totalPrice" },
+              maxTotalPrice: { $max: "$totalPrice" },
+            },
+          },
+        ]);
+
+        // Aggregation for individual product prices
+        // First unwind steps, then unwind products, then get min/max
+        const productPriceAggregation = await Routine.aggregate([
+          { $match: { skinType: normalizedSkinType, strategy: strategy } },
+          { $unwind: "$steps" },
+          { $unwind: "$steps.products" },
+          {
+            $lookup: {
+              from: "products",
+              localField: "steps.products",
+              foreignField: "_id",
+              as: "productDetails",
+            },
+          },
+          { $unwind: "$productDetails" },
+          {
+            $group: {
+              _id: null,
+              minProductPrice: { $min: "$productDetails.price" },
+              maxProductPrice: { $max: "$productDetails.price" },
+            },
+          },
+        ]);
+
+        // Store results
+        priceRanges[strategy] = {
+          totalRoutinePrice: {
+            min: totalPriceAggregation[0]?.minTotalPrice || 0,
+            max: totalPriceAggregation[0]?.maxTotalPrice || 0,
+          },
+          individualProductPrice: {
+            min: productPriceAggregation[0]?.minProductPrice || 0,
+            max: productPriceAggregation[0]?.maxProductPrice || 0,
+          },
+        };
+      })
+    );
+
+    const response = {
+      skinType: normalizedSkinType,
+      priceRanges,
+    };
+
+    // Cache the result
+    priceRangeCache.set(cacheKey, {
+      data: response,
+      timestamp: Date.now(),
+    });
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Error in getPriceRanges:", error);
+    res
+      .status(500)
+      .json({ message: "Error retrieving price ranges", error: error.message });
   }
 };

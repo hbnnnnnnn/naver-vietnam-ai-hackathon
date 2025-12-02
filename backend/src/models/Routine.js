@@ -18,7 +18,12 @@ const routineSchema = new mongoose.Schema({
     avgRank: { type: Number, required: true }
 }, { timestamps: true });
 
+// Indexes for efficient querying
+// For getPriceRanges endpoint: supports aggregation by skinType + strategy
+routineSchema.index({ skinType: 1, strategy: 1 });
+// For general routine queries with price filtering
 routineSchema.index({ skinType: 1, totalPrice: 1, avgRank: 1 });
+// For price range queries with strategy
 routineSchema.index({ skinType: 1, strategy: 1, totalPrice: 1 });
 
 export default mongoose.model('Routine', routineSchema);
