@@ -236,7 +236,7 @@ const ProductModal = ({ isOpen, onClose, category, products, isLoading }) => {
                   iconSize={16}
                   onClick={() => {
                     onClose();
-                    window.location.href = "/skincare-chatbot";
+                    window.location.href = "/chatbot";
                   }}
                 >
                   Get More Advice

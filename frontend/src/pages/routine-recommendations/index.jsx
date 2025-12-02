@@ -17,7 +17,7 @@ const RoutineRecommendations = () => {
   const navigate = useNavigate();
   const [routineType, setRoutineType] = useState("minimal");
   const [priceRange, setPriceRange] = useState("budget-friendly");
-  const [priceMode, setPriceMode] = useState("total"); // "total" or "individual"
+  const [priceMode, setPriceMode] = useState("individual"); // "total" or "individual"
   const [maxPrice, setMaxPrice] = useState(5000000); // Default 5 million VND
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);

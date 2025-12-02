@@ -186,7 +186,7 @@ const SavedRoutinesTab = ({ savedRoutines = [], onRoutinesChange }) => {
                   No saved routines yet
                 </h3>
                 <p className="text-muted-foreground font-caption mb-4">
-                  Create your first routine from product analysis
+                  Create your first routine
                 </p>
                 <Button
                   variant="default"

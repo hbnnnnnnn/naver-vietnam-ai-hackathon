@@ -123,14 +123,14 @@ const FilterControls = ({
 
   const priceModeOptions = [
     {
-      value: "total",
-      label: "Total routine price",
-      description: "Based on total cost of all products in routine",
-    },
-    {
       value: "individual",
       label: "Individual product price",
       description: "Based on price range of each product",
+    },
+    {
+      value: "total",
+      label: "Total routine price",
+      description: "Based on total cost of all products in routine",
     },
   ];
 
@@ -148,7 +148,7 @@ const FilterControls = ({
         <div className="flex-1">
           <Select
             label="Skincare routine type"
-            description="Choose the complexity level that suits your lifestyle"
+            description="Choose the routine strategy that best fits your skin goals"
             options={routineOptions}
             value={routineType}
             onChange={setRoutineType}
