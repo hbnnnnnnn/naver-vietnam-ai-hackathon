@@ -65,13 +65,12 @@ const FilterControls = ({
 
   const currentRange = getCurrentPriceRange();
 
-  // Update maxPrice when strategy or mode changes
   useEffect(() => {
-    // Set to min when strategy or mode changes
-    setMaxPrice(currentRange.min);
-  }, [routineType, priceMode]);
+    if (priceRanges && priceRanges[routineType]) {
+      setMaxPrice(currentRange.min);
+    }
+  }, [routineType, priceMode, priceRanges]);
 
-  // Clamp maxPrice to current range for display
   const clampedMaxPrice = Math.min(
     Math.max(maxPrice, currentRange.min),
     currentRange.max
