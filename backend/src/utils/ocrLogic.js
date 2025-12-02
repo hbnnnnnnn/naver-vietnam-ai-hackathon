@@ -14,30 +14,49 @@ const OCR_CONFIG = {
 
 export async function callNaverOcr({ secretKey, apiUrl, imagePath, imageFormat = OCR_CONFIG.DEFAULT_FORMAT, lang = OCR_CONFIG.DEFAULT_LANG }) {
   if (!secretKey || !apiUrl || !imagePath) throw new Error('Missing required parameters: secretKey, apiUrl, and imagePath are required');
-  const form = new FormData();
+  
+  // Read image file and encode to base64
+  const imageBuffer = fs.readFileSync(imagePath);
+  const base64Data = imageBuffer.toString('base64');
+  
   const message = {
     version: OCR_CONFIG.VERSION,
     requestId: `${Date.now()}`,
     timestamp: Date.now(),
-    images: [{ format: imageFormat, name: path.basename(imagePath), data: null, url: null }],
-    lang: lang,
-    resultType: OCR_CONFIG.RESULT_TYPE
+    images: [{ format: imageFormat, name: path.basename(imagePath), data: base64Data }],
+    lang: lang
   };
-  form.append('message', JSON.stringify(message));
-  form.append('file', fs.createReadStream(imagePath));
+  
+  // Log request details for debugging
+//   console.log('[OCR] Request details:', {
+//     apiUrl,
+//     imagePath,
+//     imageFormat,
+//     lang,
+//     message,
+//     messageString: JSON.stringify(message),
+//     headers: { 'X-OCR-SECRET': secretKey, 'Content-Type': 'application/json' }
+//   });
+  
   try {
     const response = await axios({
       method: 'post',
       url: apiUrl,
-      headers: { 'X-OCR-SECRET': secretKey, ...form.getHeaders() },
-      data: form,
+      headers: { 'X-OCR-SECRET': secretKey, 'Content-Type': 'application/json' },
+      data: message,
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
       timeout: 60000 // 60 second timeout for OCR calls
     });
     return response.data;
   } catch (err) {
-    console.error('Error calling OCR API:', err.response?.data || err);
+    // Log error details for debugging
+    // console.error('[OCR] API error:', {
+    //   error: err.message,
+    //   response: err.response?.data,
+    //   status: err.response?.status,
+    //   headers: err.response?.headers
+    // });
     throw new Error(`OCR API call failed: ${err.message}`);
   }
 }
