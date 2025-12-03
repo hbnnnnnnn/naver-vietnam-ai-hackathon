@@ -32,8 +32,8 @@ export const productAnalyzeFromImages = async (req, res) => {
     let backImagePath = path.resolve(backImageFile.path);
 
     // Convert images to PNG if needed
-    frontImagePath = await convertImageToPng(frontImagePath);
-    backImagePath = await convertImageToPng(backImagePath);
+    // frontImagePath = await convertImageToPng(frontImagePath);
+    // backImagePath = await convertImageToPng(backImagePath);
     const secretKey = process.env.OCR_SECRET_KEY;
     const apiUrl = process.env.OCR_API_URL;
     if (!secretKey || !apiUrl) {
@@ -51,6 +51,7 @@ export const productAnalyzeFromImages = async (req, res) => {
     // Get OCR text from both images
     const frontOcrText = getOcrTextFromData(frontOcrData);
     const backOcrText = getOcrTextFromData(backOcrData);
+    console.log(backOcrText);
 
     const startExtract = Date.now();
     const [ingredientResult, productInfo] = await Promise.all([
