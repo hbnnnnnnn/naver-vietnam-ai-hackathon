@@ -1,4 +1,5 @@
 import { runOcrService, getOcrTextFromData } from "../services/ocr.service.js";
+import { convertImageToPng } from "../services/imageConvert.service.js";
 import { extractIngredientsFromTextService } from "../services/ingredientExtract.service.js";
 import { extractProductInfoFromTextService } from "../services/productInfoExtract.service.js";
 import { summarizeBenefitsFromIngredients } from "../services/benefitSummarization.service.js";
@@ -27,8 +28,12 @@ export const productAnalyzeFromImages = async (req, res) => {
         .status(400)
         .json({ error: "Both front and back images are required." });
     }
-    const frontImagePath = path.resolve(frontImageFile.path);
-    const backImagePath = path.resolve(backImageFile.path);
+    let frontImagePath = path.resolve(frontImageFile.path);
+    let backImagePath = path.resolve(backImageFile.path);
+
+    // Convert images to PNG if needed
+    frontImagePath = await convertImageToPng(frontImagePath);
+    backImagePath = await convertImageToPng(backImagePath);
     const secretKey = process.env.OCR_SECRET_KEY;
     const apiUrl = process.env.OCR_API_URL;
     if (!secretKey || !apiUrl) {
