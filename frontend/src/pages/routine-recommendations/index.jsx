@@ -843,7 +843,7 @@ const RoutineRecommendations = () => {
   return (
     <>
       <Helmet>
-        <title>routine</title>
+        <title>SkinCare Analyzer</title>
         <meta
           name="description"
           content="Get personalized skincare routine recommendations based on your skin type and budget. From minimal to comprehensive routines."

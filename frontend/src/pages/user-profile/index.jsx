@@ -292,7 +292,7 @@ const UserProfileDashboard = () => {
   return (
     <>
       <Helmet>
-        <title>Profile</title>
+        <title>SkinCare Analyzer</title>
         <meta
           name="description"
           content="Manage your profile, product scan history and skincare routines"

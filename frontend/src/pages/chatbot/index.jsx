@@ -14,11 +14,13 @@ const SkinchateChatbot = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userId] = useState(() => {
     // Generate or get userId from localStorage
-    const savedUserId = localStorage.getItem('chatUserId');
+    const savedUserId = localStorage.getItem("chatUserId");
     if (savedUserId) return savedUserId;
 
-    const newUserId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('chatUserId', newUserId);
+    const newUserId = `user-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    localStorage.setItem("chatUserId", newUserId);
     return newUserId;
   });
   const messagesEndRef = useRef(null);
@@ -36,18 +38,22 @@ const SkinchateChatbot = () => {
       const response = await ApiService.sendWelcomeMessage(userId);
       if (response && response.bubbles && response.bubbles.length > 0) {
         // Only get the first text bubble for welcome message
-        const firstTextBubble = response.bubbles.find(bubble => bubble.type === 'text');
+        const firstTextBubble = response.bubbles.find(
+          (bubble) => bubble.type === "text"
+        );
 
         const welcomeMessage = {
           id: Date.now(),
-          content: firstTextBubble?.data?.description || "Welcome to SkinCare Assistant!",
+          content:
+            firstTextBubble?.data?.description ||
+            "Welcome to SkinCare Assistant!",
           timestamp: new Date(),
           isUser: false,
         };
         setMessages([welcomeMessage]);
       }
     } catch (error) {
-      console.error('Failed to initialize chat:', error);
+      console.error("Failed to initialize chat:", error);
       // Fallback welcome message
       const fallbackMessage = {
         id: Date.now(),
@@ -74,41 +80,44 @@ const SkinchateChatbot = () => {
 
     try {
       // Call real Naver Clova Chatbot API
-      const response = await ApiService.sendChatMessage(userId, messageData?.content);
+      const response = await ApiService.sendChatMessage(
+        userId,
+        messageData?.content
+      );
 
       if (response && response.bubbles && response.bubbles.length > 0) {
         let newBotMessages = [];
 
         response.bubbles.forEach((bubble, idx) => {
           switch (bubble.type) {
-            case 'text':
+            case "text":
               if (bubble.data?.description) {
                 newBotMessages.push({
                   id: Date.now() + idx,
-                  type: 'text',
+                  type: "text",
                   content: bubble.data.description,
                   timestamp: new Date(),
                   isUser: false,
                 });
               }
               break;
-            case 'image':
+            case "image":
               if (bubble.data?.url) {
                 newBotMessages.push({
                   id: Date.now() + idx,
-                  type: 'image',
+                  type: "image",
                   image: bubble.data.url,
-                  imageAlt: bubble.data.urlAlias || 'Image',
+                  imageAlt: bubble.data.urlAlias || "Image",
                   timestamp: new Date(),
                   isUser: false,
                 });
               }
               break;
-            case 'button':
+            case "button":
               if (bubble.data?.description) {
                 newBotMessages.push({
                   id: Date.now() + idx,
-                  type: 'button',
+                  type: "button",
                   content: bubble.data.description,
                   timestamp: new Date(),
                   isUser: false,
@@ -116,14 +125,16 @@ const SkinchateChatbot = () => {
                 });
               }
               break;
-            case 'template':
+            case "template":
               // Extract cover and buttons
-              const cover = bubble.data?.cover?.data?.description || bubble.data?.cover?.data?.imageUrl;
+              const cover =
+                bubble.data?.cover?.data?.description ||
+                bubble.data?.cover?.data?.imageUrl;
               const buttons = [];
               if (bubble.data?.contentTable) {
-                bubble.data.contentTable.forEach(row => {
-                  row.forEach(cell => {
-                    if (cell.data?.type === 'button') {
+                bubble.data.contentTable.forEach((row) => {
+                  row.forEach((cell) => {
+                    if (cell.data?.type === "button") {
                       buttons.push({
                         title: cell.data.title,
                         postback: cell.data.data?.action?.data?.postback,
@@ -135,23 +146,25 @@ const SkinchateChatbot = () => {
               }
               newBotMessages.push({
                 id: Date.now() + idx,
-                type: 'template',
+                type: "template",
                 cover,
                 buttons,
                 timestamp: new Date(),
                 isUser: false,
               });
               break;
-            case 'carousel':
+            case "carousel":
               // Each card is a template
               if (bubble.data?.cards) {
                 bubble.data.cards.forEach((card, cardIdx) => {
-                  const cover = card.data?.cover?.data?.description || card.data?.cover?.data?.imageUrl;
+                  const cover =
+                    card.data?.cover?.data?.description ||
+                    card.data?.cover?.data?.imageUrl;
                   const buttons = [];
                   if (card.data?.contentTable) {
-                    card.data.contentTable.forEach(row => {
-                      row.forEach(cell => {
-                        if (cell.data?.type === 'button') {
+                    card.data.contentTable.forEach((row) => {
+                      row.forEach((cell) => {
+                        if (cell.data?.type === "button") {
                           buttons.push({
                             title: cell.data.title,
                             postback: cell.data.data?.action?.data?.postback,
@@ -163,7 +176,7 @@ const SkinchateChatbot = () => {
                   }
                   newBotMessages.push({
                     id: Date.now() + idx + cardIdx,
-                    type: 'template',
+                    type: "template",
                     cover,
                     buttons,
                     timestamp: new Date(),
@@ -172,18 +185,18 @@ const SkinchateChatbot = () => {
                 });
               }
               break;
-            case 'flex':
+            case "flex":
               // Store flex data for custom rendering
               newBotMessages.push({
                 id: Date.now() + idx,
-                type: 'flex',
+                type: "flex",
                 flex: bubble.data,
                 timestamp: new Date(),
                 isUser: false,
               });
               break;
-            case 'line_sticker':
-            case 'lineworks_sticker':
+            case "line_sticker":
+            case "lineworks_sticker":
               newBotMessages.push({
                 id: Date.now() + idx,
                 type: bubble.type,
@@ -197,7 +210,7 @@ const SkinchateChatbot = () => {
               if (bubble.data?.description) {
                 newBotMessages.push({
                   id: Date.now() + idx,
-                  type: 'text',
+                  type: "text",
                   content: bubble.data.description,
                   timestamp: new Date(),
                   isUser: false,
@@ -227,20 +240,22 @@ const SkinchateChatbot = () => {
           ...prev,
           {
             id: Date.now() + 999,
-            content: "I'm sorry, I'm having trouble processing your request right now. Please try again.",
+            content:
+              "I'm sorry, I'm having trouble processing your request right now. Please try again.",
             timestamp: new Date(),
             isUser: false,
           },
         ]);
       }
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error("Failed to send message:", error);
       // Error fallback message
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 999,
-          content: "I'm experiencing some technical difficulties. Please try again later.",
+          content:
+            "I'm experiencing some technical difficulties. Please try again later.",
           timestamp: new Date(),
           isUser: false,
         },
@@ -289,7 +304,7 @@ const SkinchateChatbot = () => {
   return (
     <>
       <Helmet>
-        <title>AI Skincare Chatbot - SkinCare Analyzer</title>
+        <title>SkinCare Analyzer</title>
         <meta
           name="description"
           content="Chat with AI skincare expert, get personalized skincare routine advice and ingredient analysis"
@@ -327,7 +342,9 @@ const SkinchateChatbot = () => {
                       isUser={message?.isUser}
                       timestamp={message?.timestamp}
                       onShowMore={handleShowMore}
-                      onSuggestionClick={(suggestion) => handleSendMessage({ content: suggestion })}
+                      onSuggestionClick={(suggestion) =>
+                        handleSendMessage({ content: suggestion })
+                      }
                     />
                   ))}
 
@@ -347,7 +364,10 @@ const SkinchateChatbot = () => {
 
             {/* Chat Input - Stick to bottom */}
             <div className="shrink-0 border-t border-white/10 bg-white/5 backdrop-blur-sm">
-              <ChatInput onSendMessage={handleSendMessage} disabled={isTyping} />
+              <ChatInput
+                onSendMessage={handleSendMessage}
+                disabled={isTyping}
+              />
             </div>
           </div>
 
