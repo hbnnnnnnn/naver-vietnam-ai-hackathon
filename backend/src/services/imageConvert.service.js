@@ -26,6 +26,8 @@ export async function convertImageToPng(imagePath) {
   // Only convert if PNG doesn't already exist
   if (!fs.existsSync(pngPath)) {
     let buffer;
+    // Always downscale to max 512x512 to remove HD quality
+    const maxDimension = 512;
     if ([".heic", ".heif"].includes(ext)) {
       if (!heicConvert) {
         throw new Error("heic-convert library is required to convert HEIC images. Please install it with 'npm install heic-convert'.");
@@ -36,9 +38,14 @@ export async function convertImageToPng(imagePath) {
         format: "PNG",
         quality: 1
       });
+      // Downscale to max 512x512 before compression
+      buffer = await sharp(buffer)
+        .resize({ width: maxDimension, height: maxDimension, fit: 'inside', withoutEnlargement: true })
+        .png()
+        .toBuffer();
       // Compress HEIC-converted images to below 300KB
       if (buffer.length > 300 * 1024) {
-        let width = 1024;
+        let width = maxDimension;
         let quality = 80;
         let compressionLevel = 9;
         let attempts = 0;
@@ -48,29 +55,46 @@ export async function convertImageToPng(imagePath) {
             .png({ quality, compressionLevel })
             .toBuffer();
           if (buffer.length <= 300 * 1024) break;
-          // Reduce width and quality for next attempt
-          width = Math.max(256, Math.floor(width * 0.8));
-          quality = Math.max(30, Math.floor(quality * 0.8));
+          width = Math.max(64, Math.floor(width * 0.7));
+          quality = Math.max(10, Math.floor(quality * 0.7));
           attempts++;
-        } while (buffer.length > 300 * 1024 && attempts < 10);
+        } while (buffer.length > 300 * 1024 && attempts < 15);
+        // Fallback: force compress if still too large
+        if (buffer.length > 300 * 1024) {
+          buffer = await sharp(buffer)
+            .resize({ width: 64, height: 64, fit: 'inside', withoutEnlargement: true })
+            .png({ quality: 10, compressionLevel: 9 })
+            .toBuffer();
+        }
       }
     } else {
+      // Downscale to max 512x512 before compression
+      buffer = await sharp(imagePath)
+        .resize({ width: maxDimension, height: maxDimension, fit: 'inside', withoutEnlargement: true })
+        .png()
+        .toBuffer();
       // Try resizing and compressing until under 300KB
-      let width = 1024;
+      let width = maxDimension;
       let quality = 80;
       let compressionLevel = 9;
       let attempts = 0;
       do {
-        buffer = await sharp(imagePath)
+        buffer = await sharp(buffer)
           .resize({ width, height: width, fit: 'inside', withoutEnlargement: true })
           .png({ quality, compressionLevel })
           .toBuffer();
         if (buffer.length <= 300 * 1024) break;
-        // Reduce width and quality for next attempt
-        width = Math.max(256, Math.floor(width * 0.8));
-        quality = Math.max(30, Math.floor(quality * 0.8));
+        width = Math.max(64, Math.floor(width * 0.7));
+        quality = Math.max(10, Math.floor(quality * 0.7));
         attempts++;
-      } while (buffer.length > 300 * 1024 && attempts < 10);
+      } while (buffer.length > 300 * 1024 && attempts < 15);
+      // Fallback: force compress if still too large
+      if (buffer.length > 300 * 1024) {
+        buffer = await sharp(buffer)
+          .resize({ width: 64, height: 64, fit: 'inside', withoutEnlargement: true })
+          .png({ quality: 10, compressionLevel: 9 })
+          .toBuffer();
+      }
     }
     await fs.promises.writeFile(pngPath, buffer);
   }
